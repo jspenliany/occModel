@@ -32,8 +32,12 @@ class PSI3DGlassBridge:
         self.plasticity_speed = 0.01  # 习惯转化为性格的重塑速率（观念改变极其缓慢）
 
     def update_system_clock(self):
-        """系统主时钟 Tick 推进：各层自行处理自身的时间衰减"""
-        self.m_layer.update_decay()
+        """系统主时钟：不仅各自衰减，且完成短期‘希望’向中期‘信念护盾’的沉淀"""
+        # 获取当前最热乎的短期希望值
+        active_hope = self.e_layer.active_emotions.get("Hope", 0.0)
+
+        # 将希望值作为参数，推动心情层更新（补充信心、生成护盾）
+        self.m_layer.update_decay(current_hope=active_hope)
         self.e_layer.update_decay()
 
     def receive_user_stimulus(self, appraisal_data: dict):

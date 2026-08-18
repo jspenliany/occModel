@@ -57,6 +57,39 @@ def debug_avatar_pipeline():
         avatar.update_system_clock()
 
 
+def run_faith_test():
+    # 创建一个充满温情与理想主义的坚韧角色 (ENFJ-A)
+    avatar = PSI3DGlassBridge("ENFJ-A")
+
+    # 认知评估：虽然眼前极其痛苦，但未来的愿景非常宏大
+    hardship_with_future = {
+        "desirability": -0.7,  # 眼前的短期艰辛：极其痛苦
+        "future_desirability": 0.9,  # 🌟 宏大的未来：必胜的目标
+        "blameworthiness": -0.5,  # 伴随着他人的冷嘲热讽
+        "prospect_status": "none"
+    }
+
+    print("=== [第 1 阶段：确立必胜信念，奔赴远方] ===")
+    avatar.receive_user_stimulus(hardship_with_future)
+    # 让时间推移，将短期的‘爆发希望’沉淀为中期的‘坚韧护盾’与‘必胜信心’
+    for _ in range(3):
+        avatar.update_system_clock()
+
+    state = avatar.get_current_avatar_state()
+    print(f"当前短期情绪: Hope={state['active_emotions']['Hope']}, Anger={state['active_emotions']['Anger']}")
+    print(
+        f"内心的必胜信心(Competence): {avatar.m_layer.competence:.2f}, 信念护盾厚度: {avatar.m_layer.faith_shield:.2f}")
+
+    print("\n=== [第 2 阶段：再次遭遇同样强度的艰辛与打击] ===")
+    # 再次输入同样强度的伤害
+    avatar.receive_user_stimulus({"desirability": -0.7, "blameworthiness": -0.5, "prospect_status": "none"})
+
+    state_after = avatar.get_current_avatar_state()
+    print(f"拥有信念后的即时 Anger 强度: {state_after['active_emotions']['Anger']}")
+    print(f"拥有信念后的即时 Distress 强度: {state_after['active_emotions']['Distress']}")
+
+
 if __name__ == "__main__":
     # run_avatar_pipeline()
-    debug_avatar_pipeline()
+    # debug_avatar_pipeline()
+    run_faith_test()
