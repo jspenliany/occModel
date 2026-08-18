@@ -6,7 +6,7 @@ class LLMPromptRenderer:
     Translates structural states (Personality, Mood, Emotion) from the PSI framework
     into highly explicit instructions that force LLMs to output matching dialog and behavior.
     """
-    def init(self, character_name: str, core_lore: str):
+    def __init__(self, character_name: str, core_lore: str):
         self.character_name = character_name
         self.core_lore = core_lore
 

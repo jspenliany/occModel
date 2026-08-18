@@ -1,7 +1,7 @@
 # filename: psi_bridge.py
-from personality import PersonalityLayer
-from mood import MoodLayer
-from emotion import OCCEmotionLayer
+from src.models.psi.mood import MoodLayer
+from src.models.psi.personality import PersonalityLayer
+from src.models.psi.emotion import OCCEmotionLayer
 
 
 class PSI3DGlassBridge:
