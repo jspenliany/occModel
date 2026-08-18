@@ -37,6 +37,26 @@ def run_avatar_pipeline():
     # The string generated in `furious_prompt` is what you dispatch to your OpenAI/FastAPI payload loop:
     # response = openai.ChatCompletion.create(messages=[{"role": "system", "content": furious_prompt}, ...])
 
+def debug_avatar_pipeline():
+    # 初始：创建一个温柔、信任人类、情绪稳定的暖男/暖女类型 (ENFJ-A)
+    avatar = PSI3DGlassBridge("ENFJ-A")
+    print("=== [初始状态] ===")
+    print("初始性格基因：", avatar.get_current_avatar_state()["ocean_dna"])
+    # 此时其 A（宜人性）很高（比如 0.82），N（神经质）很低（比如 0.15）
+
+    # 模拟连续遭遇 6 次背叛和严厉的指责（行为与事件的连续重复）
+    print("\n=== [开始连续遭遇外部恶劣对待，形成行为与情绪习惯] ===")
+    bad_stimulus = {"desirability": -0.5, "blameworthiness": -0.8}
+
+    for i in range(1, 30):
+        print(f"\n---> 第 {i} 次被深度伤害...")
+        avatar.receive_user_stimulus(bad_stimulus)
+        print(f"当前即时 Anger 强度: {avatar.e_layer.active_emotions['Anger']:.2f}")
+        print("当前性格基因状态：", avatar.get_current_avatar_state()["ocean_dna"])
+        #--
+        avatar.update_system_clock()
+
 
 if __name__ == "__main__":
-    run_avatar_pipeline()
+    # run_avatar_pipeline()
+    debug_avatar_pipeline()

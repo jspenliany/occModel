@@ -1,7 +1,7 @@
 # filename: psi_bridge.py
 from src.models.psi.mood import MoodLayer
 from src.models.psi.personality import PersonalityLayer
-from src.models.psi.emotion import OCCEmotionLayer
+from src.models.psi.emotion_all import OCCEmotionLayer
 
 
 class PSI3DGlassBridge:
@@ -24,6 +24,12 @@ class PSI3DGlassBridge:
 
         # 3. 组装第三层：情感层
         self.e_layer = OCCEmotionLayer()
+        # === 🌟 核心新增：习惯与记忆累积器（Habit Buffer） ===
+        self.habit_counters = {
+            "negative_clash_count": 0,  # 频繁跟人吵架、冲突的计数
+            "altruistic_act_count": 0  # 频繁帮助他人、获得感激的计数
+        }
+        self.plasticity_speed = 0.01  # 习惯转化为性格的重塑速率（观念改变极其缓慢）
 
     def update_system_clock(self):
         """系统主时钟 Tick 推进：各层自行处理自身的时间衰减"""
@@ -37,6 +43,22 @@ class PSI3DGlassBridge:
             personality_layer=self.p_layer,
             mood_layer=self.m_layer
         )
+
+        # === 🌟 核心新增：检测行为与短期情感，将其沉淀为“习惯”并反向重塑“观念” ===
+        # 联动机制：如果当前事件导致了强烈的“生气(Anger)”或“非议(Reproach)”，代表 AI 正在频繁经历防御性冲突
+        if self.e_layer.active_emotions.get("Anger", 0.0) > 0.6:
+            self.habit_counters["negative_clash_count"] += 1
+
+            # 【习惯重复构建/改造观念】：如果冲突习惯累积到一定程度
+            if self.habit_counters["negative_clash_count"] >= 3:
+                print("\n🚨 [自循环警报]：AI 频繁处于冲突与愤怒习惯中！开始反向重塑观念...")
+                # 频繁冲突让 AI 变得不再信任他人（降低宜人性 A）
+                self.p_layer.dynamic_reshape_trait("A", -self.plasticity_speed)
+                # 频繁冲突让 AI 的精神变得高度敏感情绪化（提高神经质 N）
+                self.p_layer.dynamic_reshape_trait("N", self.plasticity_speed)
+
+                # 重置计数器，等待下一轮习惯沉淀
+                self.habit_counters["negative_clash_count"] = 0
 
     # --- 开放给外部物理/生理系统的API Hooks ---
     def hook_internal_needs_drain(self, loss_v: float, loss_a: float):

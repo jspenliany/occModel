@@ -36,3 +36,12 @@ class PersonalityLayer:
 
     def get_trait(self, trait_name: str) -> float:
         return self.ocean.get(trait_name, 0.5)
+    # === 🌟 核心新增：反向重塑观念的接口 ===
+    def dynamic_reshape_trait(self, trait_name: str, delta: float):
+        """
+        这个接口允许习惯层反向修改性格基因。
+        变化率非常微小（例如 0.005），代表“观念极难被轻易改变，需要日积月累”。
+        """
+        if trait_name in self.ocean:
+            # 限制在 [0.0, 1.0] 的合法性格区间内
+            self.ocean[trait_name] = max(0.0, min(1.0, self.ocean[trait_name] + delta))
