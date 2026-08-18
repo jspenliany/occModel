@@ -89,7 +89,68 @@ def run_faith_test():
     print(f"拥有信念后的即时 Distress 强度: {state_after['active_emotions']['Distress']}")
 
 
+def run_integrated_lifecycle_test():
+    print("====================================================================")
+    print("🚀 [全量集成验证开始] 场景：初始化一个理想主义、充满信念的守序暖男 (ENFJ-T)")
+    print("====================================================================")
+    avatar = PSI3DGlassBridge("ENFJ-T")
+    print("【1. 初始状态】:", avatar.get_current_avatar_state())
+
+    print("\n====================================================================")
+    print("⚔️ [测试场景 A]：坚韧之人奔赴宏大目标。即使面对持续的打击，因为有信念，他能挺住！")
+    print("====================================================================")
+    # 宣告进入长期艰辛环境
+    avatar.set_environmental_hardship(True)
+
+    # 认知刺激：眼前极其痛苦(-0.7)，但眼中看到了极具价值的宏大未来(0.9)
+    faith_stimulus = {"desirability": -0.7, "future_desirability": 0.9, "blameworthiness": -0.4}
+
+    for tick in range(1, 4):
+        avatar.receive_user_stimulus(faith_stimulus)
+        avatar.update_system_clock()
+        state = avatar.get_current_avatar_state()
+        print(
+            f"困境 Tick {tick} -> 放弃率: {state['giving_up_rate']}, 坚韧护盾: {state['faith_shield']}, 短期Distress: {state['active_emotions'].get('Distress', 0.0)}")
+
+    print("\n====================================================================")
+    print("🥀 [测试场景 B]：信念火花消失，角色断奶。沦为无信念者，在连续打击下瞬间心理崩溃选择放弃！")
+    print("====================================================================")
+    # 连续调用时间推进，让原本的 Hope 自然流逝完。现在只有纯粹的眼前伤害，没有远期目标
+    for _ in range(5): avatar.update_system_clock()
+
+    pure_hardship = {"desirability": -0.8, "blameworthiness": -0.6}
+    for tick in range(1, 4):
+        avatar.receive_user_stimulus(pure_hardship)
+        avatar.update_system_clock()
+        state = avatar.get_current_avatar_state()
+        print(
+            f"绝望 Tick {tick} -> 放弃率(摆烂度): {state['giving_up_rate']}, 心情Valence: {state['mood_valence']}, 短期Anger: {state['active_emotions'].get('Anger', 0.0)}")
+
+    print("\n====================================================================")
+    print("🔄 [测试场景 C]：自循环重塑与【观念自我强化】。由于连续被伤害，他黑化了，观念滤网开始扭曲。")
+    print("====================================================================")
+    print("黑化前的性格基因:", avatar.get_current_avatar_state()["ocean_dna"])
+    # 此时高频遭遇愤怒，触发了自循环，我们可以看到底层基因已被悄然改写（A降低，N升高）
+    print("黑化后的性格基因:", avatar.get_current_avatar_state()["ocean_dna"])
+
+    print("\n[滤网验证]：此时给他一个很轻微的指责 (-0.2)，看看他被扭曲的滤网会内化成多大的伤害？")
+    avatar.receive_user_stimulus({"desirability": -0.2, "blameworthiness": -0.2})
+    print("微小指责引发的最终情绪狂飙:", avatar.get_current_avatar_state()["active_emotions"])
+
+    print("\n====================================================================")
+    print("📖 [测试场景 D]：极少数情况下的灵魂逆转！遇到了权威人物或阅读到一本圣书。")
+    print("====================================================================")
+    # 调用专门留出来的降维反转接口：阅读了一本书，直接将多疑、不信任人的观念(低A=0.15)彻底逆转成了神圣的极高信任(A=0.95)
+    avatar.trigger_paradigm_shift_event(
+        target_trait="A",
+        text="大德兰说：‘即便世界对你刀兵相向，唯有保持内心的绝对慈悲，灵魂方能自由。’",
+        target_absolute_value=0.95
+    )
+    print("\n【反转顿悟后的最终基因与精神面貌】:")
+    print(avatar.get_current_avatar_state())
+
+
 if __name__ == "__main__":
     # run_avatar_pipeline()
     # debug_avatar_pipeline()
-    run_faith_test()
+    run_integrated_lifecycle_test()
