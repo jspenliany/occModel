@@ -66,3 +66,23 @@ class MoodLayer:
         base_multiplier = 1.0 - (self.valence * 0.5)
         # 如果已经产生了放弃心理，负面感受直接暴增；如果信心满满，则负面感受被大幅缩减
         return base_multiplier * (1.2 - self.competence) * (1.0 + self.giving_up_rate)
+
+    # 追加入 mood.py 的 MoodLayer 类中
+    def to_dict(self) -> dict:
+        return {
+            "baseline_valence": self.baseline_valence,
+            "baseline_arousal": self.baseline_arousal,
+            "valence": self.valence,
+            "arousal": self.arousal,
+            "decay_rate": self.decay_rate,
+            "competence": self.competence,
+            "faith_shield": self.faith_shield,
+            "giving_up_rate": self.giving_up_rate
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'MoodLayer':
+        instance = cls.__new__(cls)
+        for key, value in data.items():
+            setattr(instance, key, value)
+        return instance

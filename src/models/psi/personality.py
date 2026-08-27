@@ -51,3 +51,18 @@ class PersonalityLayer:
             print(f"\n📖 [观念崩塌与重塑] 受到外界核心刺激/阅读书籍。")
             print(f"触发文本: \"{trigger_text}\"")
             print(f"核心观念 [{target_trait}] 发生断裂式突变：{old_val:.2f} ──> {self.ocean[target_trait]:.2f}")
+
+    # 追加入 personality.py 的 PersonalityLayer 类中
+    def to_dict(self) -> dict:
+        return {
+            "mbti": self.mbti,
+            "ocean": self.ocean
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'PersonalityLayer':
+        # 绕过 init 的随机转化，直接还原锁定数值
+        instance = cls.__new__(cls)
+        instance.mbti = data["mbti"]
+        instance.ocean = data["ocean"]
+        return instance

@@ -105,7 +105,7 @@ def run_integrated_lifecycle_test():
     # 认知刺激：眼前极其痛苦(-0.7)，但眼中看到了极具价值的宏大未来(0.9)
     faith_stimulus = {"desirability": -0.7, "future_desirability": 0.9, "blameworthiness": -0.4}
 
-    for tick in range(1, 4):
+    for tick in range(1, 22):
         avatar.receive_user_stimulus(faith_stimulus)
         avatar.update_system_clock()
         state = avatar.get_current_avatar_state()
@@ -119,7 +119,7 @@ def run_integrated_lifecycle_test():
     for _ in range(5): avatar.update_system_clock()
 
     pure_hardship = {"desirability": -0.8, "blameworthiness": -0.6}
-    for tick in range(1, 4):
+    for tick in range(1, 22):
         avatar.receive_user_stimulus(pure_hardship)
         avatar.update_system_clock()
         state = avatar.get_current_avatar_state()
