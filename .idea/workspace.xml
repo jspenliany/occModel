@@ -4,19 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e1ea8767-b206-4a9e-bd60-efe7bcd22560" name="更改" comment="add Neuroplastic Feedback Loop">
+    <list default="true" id="e1ea8767-b206-4a9e-bd60-efe7bcd22560" name="更改" comment="add serial function for OCC model">
       <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/occModel.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/models/__init__.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/models/psi/__init__.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/prompts/__init__.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/psi_base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/models/psi/mood.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/psi/mood.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/models/psi/bridge.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/psi/bridge.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/models/psi/emotion_all.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/psi/emotion_all.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,39 +38,40 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "jspenliany"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;jspenliany&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/jspenliany/occModel.git",
-    "accountId": "dded6ea4-f6f2-4fcf-a11a-cb182c2f2a82"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/jspenliany/occModel.git&quot;,
+    &quot;accountId&quot;: &quot;dded6ea4-f6f2-4fcf-a11a-cb182c2f2a82&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 0
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
   <component name="ProjectId" id="3I4e6yhFPvh4IRk4G6kmhqwnKho" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.bridge.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.psi_base.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.bridge.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mbti2occ.executor&quot;: &quot;Run&quot;,
+    &quot;Python.psi_base.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\workspace\occModel\src\models" />
@@ -121,13 +122,37 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="mbti2occ" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="occModel" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/models" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/models/mbti2occ.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
+      <item itemvalue="Python.mbti2occ" />
       <item itemvalue="Python.bridge" />
       <item itemvalue="Python.main" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.mbti2occ" />
         <item itemvalue="Python.bridge" />
       </list>
     </recent_temporary>
@@ -171,10 +196,54 @@
       <option name="project" value="LOCAL" />
       <updated>1787039607745</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="add expectation option">
+      <option name="closed" value="true" />
+      <created>1787041848256</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1787041848256</updated>
+    </task>
+    <task id="LOCAL-00005" summary="rebuild the functions:&#10;1 Confirmation Bias &amp; Filter Bubble&#10;2 Faith-driven Perseverance vs. Giving Up&#10;3 Epiphany &amp; Paradigm Shift Interface">
+      <option name="closed" value="true" />
+      <created>1787043159416</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1787043159416</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add serial function for OCC model">
+      <option name="closed" value="true" />
+      <created>1787796971156</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1787796971156</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="master" />
+                </option>
+              </RecentGroup>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="origin/main" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
     <option name="TAB_STATES">
       <map>
         <entry key="MAIN">
@@ -201,6 +270,9 @@
     <MESSAGE value="init project" />
     <MESSAGE value="fix bug" />
     <MESSAGE value="add Neuroplastic Feedback Loop" />
-    <option name="LAST_COMMIT_MESSAGE" value="add Neuroplastic Feedback Loop" />
+    <MESSAGE value="add expectation option" />
+    <MESSAGE value="rebuild the functions:&#10;1 Confirmation Bias &amp; Filter Bubble&#10;2 Faith-driven Perseverance vs. Giving Up&#10;3 Epiphany &amp; Paradigm Shift Interface" />
+    <MESSAGE value="add serial function for OCC model" />
+    <option name="LAST_COMMIT_MESSAGE" value="add serial function for OCC model" />
   </component>
 </project>
