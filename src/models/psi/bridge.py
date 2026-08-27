@@ -75,3 +75,23 @@ class PSI3DGlassBridge:
             "faith_shield": round(self.m_layer.faith_shield, 2),
             "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0}
         }
+    # 追加入 PSI3DGlassBridge 中，实现全状态序列化
+    def to_dict(self) -> dict:
+        return {
+            "personality": self.p_layer.to_dict(),
+            "mood": self.m_layer.to_dict(),
+            "emotion": self.e_layer.to_dict(),
+            "anger_habit_counter": self.anger_habit_counter,
+            "in_hardship_flag": self.in_hardship_flag
+        }
+
+    @classmethod
+    def load_bridge(cls, state_dict: dict) -> 'PSI3DGlassBridge':
+        bridge = cls.__new__(cls)
+        bridge.p_layer = PersonalityLayer.from_dict(state_dict["personality"])
+        bridge.m_layer = MoodLayer.from_dict(state_dict["mood"])
+        bridge.e_layer = OCCEmotionLayer.from_dict(state_dict["emotion"]) # 内部自动处理物理时间衰减！
+        bridge.anger_habit_counter = state_dict["anger_habit_counter"]
+        bridge.in_hardship_flag = state_dict["in_hardship_flag"]
+        bridge.plasticity_speed = 0.015
+        return bridge

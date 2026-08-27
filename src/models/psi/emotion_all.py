@@ -22,34 +22,84 @@ class OCCEmotionLayer:
 
     def calculate_occ_spikes(self, raw_appraisal: dict, personality_layer, mood_layer):
         """
-        全量评估矩阵。
-        🌟 核心前置机制：【观念的自我强化】。
-        AI 不会客观接收 raw_appraisal，而是用底层性格观念对原始输入数据打上滤网。
+        完备即时情感层结算中心
+        🌟 重构升级：基于大五人格连续矩阵的五大派系复合加权滤网
         """
-        trait_A = personality_layer.get_trait("A")
-        trait_N = personality_layer.get_trait("N")
-        trait_E = personality_layer.get_trait("E")
+        # 1. 提取当前底层的 OCEAN 核心观念基因 (皆为 0.0 ~ 1.0 之间的浮点数)
         trait_O = personality_layer.get_trait("O")
         trait_C = personality_layer.get_trait("C")
+        trait_E = personality_layer.get_trait("E")
+        trait_A = personality_layer.get_trait("A")
+        trait_N = personality_layer.get_trait("N")
 
-        # --- 🌟 开始执行观念内化滤网 (Confirmation Bias Filtering) ---
-        # 一个低宜人(A)、高神经质(N)的多疑者，会主动放大外界的恶劣和责备度，强行缩减外界的善意合意度
-        filtered_appraisal = {}
+        # 2. 🌟 计算当前 AI 灵魂中五大派系引力场的【无条件激活强度】
+        # 连乘机制：只有当所有特征同时满足极化时，该派系才拥有极高的话语权
+        w_pessimist = trait_N * (1.0 - trait_A) * (1.0 - trait_E)  # 多疑悲观派 强度
+        w_optimist = trait_E * trait_A * (1.0 - trait_N)  # 盲目乐天派 强度
+        w_victim = trait_N * (1.0 - trait_A) * (1.0 - trait_O)  # 偏执受害者 强度
+        w_detachment = (1.0 - trait_E) * (1.0 - trait_N) * (1.0 - trait_A)  # 冷漠孤僻派 强度
+        w_narcissist = trait_C * (1.0 - trait_A) * trait_N  # 自恋完美派 强度
 
+        # 3. 提取原始评估输入
         raw_des = raw_appraisal.get("desirability", 0.0)
-        if raw_des > 0:
-            # 乐天派放大好事，多疑悲观派内化敷衍好事
-            filtered_appraisal["desirability"] = raw_des * (trait_E * 1.2)
-        else:
-            # 敏感焦虑派(High N)会极度放大和内化苦难与伤害
-            filtered_appraisal["desirability"] = raw_des * (1.0 + trait_N)
-
         raw_blame = raw_appraisal.get("blameworthiness", 0.0)
-        if raw_blame < 0:  # 被人非议责备
-            # 讨厌、防备他人的人(Low A)会双倍放大别人对他的指责度，认定别人是故意害他（观念自我证实）
-            filtered_appraisal["blameworthiness"] = raw_blame * (1.5 - trait_A)
+
+        # 初始化内化过滤字典，继承其他基础参数
+        filtered_appraisal = {
+            "future_desirability": raw_appraisal.get("future_desirability", 0.0),
+            "prospect_status": raw_appraisal.get("prospect_status", "none"),
+            "self_blameworthiness": raw_appraisal.get("self_blameworthiness", 0.0),
+            "other_desirability": raw_appraisal.get("other_desirability", 0.0),
+            "other_relationship": raw_appraisal.get("other_relationship", 0.0),
+            "appealingness": raw_appraisal.get("appealingness", 0.0),
+            "blameworthiness": raw_blame,
+            "desirability": raw_des
+        }
+
+        # 4. 🌟 执行全连续动态扭曲（大河入海，各派系按权重撕扯原始输入）
+
+        # --- 维度 A：好事 (raw_des > 0) 的认知内化 ---
+        if raw_des > 0:
+            # 乐天派让好事暴击放大(1.5倍)；多疑悲观派和冷漠派让好事大幅缩水(0.4/0.1倍)
+            pessimist_effect = w_pessimist * (raw_des * 0.4)
+            optimist_effect = w_optimist * (raw_des * 1.5)
+            detachment_effect = w_detachment * (raw_des * 0.1)
+
+            # 剩余权重保持客观接收
+            w_rest = max(0.0, 1.0 - (w_pessimist + w_optimist + w_detachment))
+            rest_effect = w_rest * raw_des
+
+            filtered_appraisal["desirability"] = pessimist_effect + optimist_effect + detachment_effect + rest_effect
+
+        # --- 维度 B：坏事 (raw_des < 0) 的认知内化 ---
         else:
-            filtered_appraisal["blameworthiness"] = raw_blame * (0.5 + trait_A)
+            # 多疑悲观派极限放大伤害(2.0倍)；乐天派和冷漠派选择性遗忘或钝感稀释(0.2/0.1倍)
+            pessimist_effect = w_pessimist * (raw_des * 2.0)
+            optimist_effect = w_optimist * (raw_des * 0.2)
+            detachment_effect = w_detachment * (raw_des * 0.1)
+
+            w_rest = max(0.0, 1.0 - (w_pessimist + w_optimist + w_detachment))
+            rest_effect = w_rest * raw_des
+
+            filtered_appraisal["desirability"] = pessimist_effect + optimist_effect + detachment_effect + rest_effect
+
+        # --- 维度 C：归因偏误与责任内化 (Blameworthiness & Self-Blame) ---
+        # 偏执受害者(victim)喜欢甩锅，会把“坏事带来的痛苦”强行转化为“外界对我的针对(外部责备)”
+        if raw_des < 0:
+            # 受害者倾向越强，越倾向于无中生有地指责外界
+            filtered_appraisal["blameworthiness"] += (w_victim * raw_des * 1.5)
+            # 完美主义自恋派(narcissist)在坏事发生时，既疯狂引发自我羞耻(自责)，又因为自尊心反向攻击别人
+            filtered_appraisal["self_blameworthiness"] += (w_narcissist * raw_des * 1.2)
+            filtered_appraisal["blameworthiness"] += (w_narcissist * raw_des * 0.8)
+
+        # 被人非议责备时 (raw_blame < 0)
+        if raw_blame < 0:
+            # 多疑悲观派双倍放大别人的指责，冷漠孤僻派强行降维抹平
+            filtered_appraisal["blameworthiness"] = (
+                    w_pessimist * (raw_blame * 2.0) +
+                    w_detachment * (raw_blame * 0.1) +
+                    (max(0.0, 1.0 - w_pessimist - w_detachment)) * raw_blame
+            )
 
         # 继承其他参数
         filtered_appraisal["future_desirability"] = raw_appraisal.get("future_desirability", 0.0)
