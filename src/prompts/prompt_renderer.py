@@ -1,4 +1,5 @@
 ### filename: prompt_renderer.py
+from src.logger_singleton import logger
 
 class LLMPromptRenderer:
     """
@@ -12,8 +13,10 @@ class LLMPromptRenderer:
 
     def _interpret_mood(self, mood: dict) -> str:
         """Translates numerical Valence and Arousal variables into clear behaviors."""
+        logger.debug("Interpreting mood...begin")
         v = mood.get("valence", 0.0)
         a = mood.get("arousal", 0.0)
+        logger.debug("Interpreting mood...v: {v}  a: {a}".format(v=v, a=a))
         if v >= 0.3 and a >= 0.3:
             return "Highly excited, energetic, exceptionally proactive, and expressive."
         elif v >= 0.3 and a < -0.3:
@@ -29,7 +32,7 @@ class LLMPromptRenderer:
         """Filters short-term spikes to isolate primary active triggers."""
 
         # Only extract short-term spikes above a strict activation threshold
-
+        logger.debug("Interpreting dominant emotions...begin")
         active = [name for name, val in emotions.items() if val >= 0.4]
         if not active:
             return ["No intense immediate emotional triggers active."]
@@ -40,6 +43,7 @@ class LLMPromptRenderer:
         "Anger": "Experiencing active indignation or hostility regarding a targeted blameworthy action.",
         "Remorse": "Weighed down by intense self-blame, inner guilt, or regret over personal performance."
         }
+        logger.debug("Interpreting dominant emotions...end")
         return [descriptions.get(emo, f"Feeling active {emo}.") for emo in active]
 
     def render_system_prompt(self, avatar_state: dict) -> str:
@@ -47,6 +51,7 @@ class LLMPromptRenderer:
         Main interface method:
         Generates the final comprehensive System Prompt string injected directly into the LLM API.
         """
+        logger.debug("Rendering system prompt...begin")
         mbti = avatar_state.get("mbti", "UNKNOWN")
         mood_desc = self._interpret_mood(avatar_state.get("current_mood", {}))
         emotion_descs = self._interpret_dominant_emotions(avatar_state.get("active_emotions", {}))
@@ -86,4 +91,5 @@ class LLMPromptRenderer:
         3. If Anger or Distress is active, your text generation should naturally display defensive or evasive characteristics matching your profile.
         4. Avoid breaking character or commenting on these backend rules. Output only the authentic vocal dialogue of {self.character_name}.
         """
+        logger.debug("Rendering system prompt...end")
         return system_prompt.strip()

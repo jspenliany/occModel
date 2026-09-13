@@ -1,5 +1,5 @@
 import random
-
+from src.logger_singleton import logger
 
 class MBTIToOCCEngine:
     def __init__(self):
@@ -18,6 +18,7 @@ class MBTIToOCCEngine:
         Converts an MBTI string (e.g., 'INFP-T', 'INTJ-A') to an OCEAN profile.
         Values range between 0.0 and 1.0.
         """
+        logger.debug('Converting MBTI to OCEAN...begin')
         clean_mbti = mbti_string.upper().strip()
 
         # Parse basic 4 traits and the identity suffix
@@ -27,6 +28,7 @@ class MBTIToOCCEngine:
             base_mbti, suffix = clean_mbti, 'A'  # Default to Assertive if missing
 
         if len(base_mbti) != 4:
+            logger.error('Invalid MBTI string: {}'.format(mbti_string))
             raise ValueError("Invalid MBTI format. Expected format like 'INFJ-T' or 'ESTP'.")
 
         # Extract MBTI components
@@ -40,6 +42,7 @@ class MBTIToOCCEngine:
             "A": random.uniform(*self.trait_ranges.get(mbti_t_f, (0.4, 0.6))),
             "N": random.uniform(*self.trait_ranges.get(f"{suffix}_suffix", (0.4, 0.6)))
         }
+        logger.debug('Converting MBTI to OCEAN...end')
         return ocean
 
     def calculate_occ_intensities(self, ocean: dict, stimulus: dict) -> dict:
@@ -47,6 +50,7 @@ class MBTIToOCCEngine:
         Calculates resulting OCC emotion intensities based on OCEAN personality traits
         and a specific incoming external environmental stimulus.
         """
+        logger.debug('Calculating OCC emotion intensities...begin')
         # Baseline threshold calculations influenced by personality traits
         thresholds = {
             "Joy": 0.4 * (1.0 - ocean["E"]),  # Extraverts trigger joy much easier (lower threshold)
@@ -89,7 +93,7 @@ class MBTIToOCCEngine:
             occ_outputs["Remorse"] = max(0.0, min(1.0, remorse_intensity))
         else:
             occ_outputs["Remorse"] = 0.0
-
+        logger.debug('Calculating OCC emotion intensities...end')
         return occ_outputs
 
 
