@@ -2,6 +2,7 @@
 from src.models.psi.mood import MoodLayer
 from src.models.psi.personality import PersonalityLayer
 from src.models.psi.emotion_all import OCCEmotionLayer
+from src.logger_singleton import logger
 
 
 class PSI3DGlassBridge:
@@ -25,6 +26,7 @@ class PSI3DGlassBridge:
 
     def receive_user_stimulus(self, appraisal_data: dict):
         """外部事件输入触发"""
+        logger.debug("receive_user_stimulus......begin")
         # 第一步：计算即时爆发（内部已挂载观念强化滤网）
         self.e_layer.calculate_occ_spikes(appraisal_data, self.p_layer, self.m_layer)
 
@@ -42,6 +44,7 @@ class PSI3DGlassBridge:
                 self.p_layer.dynamic_reshape_trait("A", -0.05)  # 黑化步长稍微加大，方便在短跑测试中肉眼可见
                 self.p_layer.dynamic_reshape_trait("N", 0.05)
                 self.anger_habit_counter = 0
+        logger.debug("receive_user_stimulus...end")
 
     def update_system_clock(self):
         """系统主时钟：推进心境、情感衰减、信念转化、以及困境结算"""
@@ -55,8 +58,9 @@ class PSI3DGlassBridge:
     def trigger_paradigm_shift_event(self, target_trait: str, text: str, target_absolute_value: float):
         """
         供外部业务调用的特殊终极接口：
-        当 AI 见到了崇拜的人或读到一本书，直接绕过习惯累积，瞬间颠覆反转底层核心观念。
+        当AI见到了崇拜的人或读到一本书，直接绕过习惯累积，瞬间颠覆反转底层核心观念。
         """
+        logger.debug("trigger_paradigm_shift_event...begin")
         self.p_layer.paradigm_shift_by_external_source(
             target_trait=target_trait,
             trigger_text=text,
@@ -65,17 +69,22 @@ class PSI3DGlassBridge:
         # 颠覆后，由于内心的猛烈顿悟，重置中期心情层的基准与状态
         self.m_layer.valence = 0.5 if target_absolute_value >= 0.5 else -0.5
         self.m_layer.giving_up_rate = 0.0  # 顿悟瞬间清除一切放弃和摆烂心态
+        logger.debug("trigger_paradigm_shift_event...end")
 
     def get_current_avatar_state(self) -> dict:
         return {
             "mbti": self.p_layer.mbti,
             "ocean_dna": {k: round(v, 3) for k, v in self.p_layer.ocean.items()},
             "mood_valence": round(self.m_layer.valence, 2),
+            "mood_arousal": round(self.m_layer.arousal, 2),
+            # "current_mood": {"valence": round(self.m_layer.valence, 2), "arousal": round(self.m_layer.arousal, 2),
+            #                  "decay_rate": round(self.m_layer.decay_rate, 2), "competence": round(self.m_layer.competence, 2),
+            #                  "faith_shield": round(self.m_layer.faith_shield, 2),"giving_up_rate": round(self.m_layer.giving_up_rate, 2)},
             "giving_up_rate": round(self.m_layer.giving_up_rate, 2),
             "faith_shield": round(self.m_layer.faith_shield, 2),
             "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0}
         }
-    # 追加入 PSI3DGlassBridge 中，实现全状态序列化
+    # 追加入 PSI3DGlassBridge中，实现全状态序列化
     def to_dict(self) -> dict:
         return {
             "personality": self.p_layer.to_dict(),

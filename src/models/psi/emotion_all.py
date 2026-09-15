@@ -1,4 +1,5 @@
 # filename: emotion.py
+from src.logger_singleton import logger
 
 class OCCEmotionLayer:
     """
@@ -25,6 +26,7 @@ class OCCEmotionLayer:
         完备即时情感层结算中心
         🌟 重构升级：基于大五人格连续矩阵的五大派系复合加权滤网
         """
+        logger.debug("calculate_occ_spikes......begin")
         # 1. 提取当前底层的 OCEAN 核心观念基因 (皆为 0.0 ~ 1.0 之间的浮点数)
         trait_O = personality_layer.get_trait("O")
         trait_C = personality_layer.get_trait("C")
@@ -55,11 +57,12 @@ class OCCEmotionLayer:
             "blameworthiness": raw_blame,
             "desirability": raw_des
         }
-
+        logger.debug(f"filtered_appraisal: {filtered_appraisal}")
         # 4. 🌟 执行全连续动态扭曲（大河入海，各派系按权重撕扯原始输入）
 
         # --- 维度 A：好事 (raw_des > 0) 的认知内化 ---
         if raw_des > 0:
+            logger.debug(f"happy forever case: {raw_appraisal}")
             # 乐天派让好事暴击放大(1.5倍)；多疑悲观派和冷漠派让好事大幅缩水(0.4/0.1倍)
             pessimist_effect = w_pessimist * (raw_des * 0.4)
             optimist_effect = w_optimist * (raw_des * 1.5)
@@ -73,6 +76,7 @@ class OCCEmotionLayer:
 
         # --- 维度 B：坏事 (raw_des < 0) 的认知内化 ---
         else:
+            logger.debug(f"doubt forever case: {raw_appraisal}")
             # 多疑悲观派极限放大伤害(2.0倍)；乐天派和冷漠派选择性遗忘或钝感稀释(0.2/0.1倍)
             pessimist_effect = w_pessimist * (raw_des * 2.0)
             optimist_effect = w_optimist * (raw_des * 0.2)
@@ -86,6 +90,7 @@ class OCCEmotionLayer:
         # --- 维度 C：归因偏误与责任内化 (Blameworthiness & Self-Blame) ---
         # 偏执受害者(victim)喜欢甩锅，会把“坏事带来的痛苦”强行转化为“外界对我的针对(外部责备)”
         if raw_des < 0:
+            logger.debug(f"hurt forever case: {raw_appraisal}")
             # 受害者倾向越强，越倾向于无中生有地指责外界
             filtered_appraisal["blameworthiness"] += (w_victim * raw_des * 1.5)
             # 完美主义自恋派(narcissist)在坏事发生时，既疯狂引发自我羞耻(自责)，又因为自尊心反向攻击别人
@@ -94,6 +99,7 @@ class OCCEmotionLayer:
 
         # 被人非议责备时 (raw_blame < 0)
         if raw_blame < 0:
+            logger.debug(f"negative forever case: {raw_appraisal}")
             # 多疑悲观派双倍放大别人的指责，冷漠孤僻派强行降维抹平
             filtered_appraisal["blameworthiness"] = (
                     w_pessimist * (raw_blame * 2.0) +
@@ -212,3 +218,4 @@ class OCCEmotionLayer:
         if desirability < 0 and self_blameworthiness < 0:
             self.active_emotions["Remorse"] = max(0.0, min(1.0, self.active_emotions["Remorse"] + (
                         abs(desirability) + abs(self_blameworthiness)) / 2 * trait_N))
+        logger.debug(f"calculate_occ_spikes......end")
