@@ -71,6 +71,33 @@ class OccEngineConfig(BaseModel):
         }
     )
 
+class HopePrecipitationConfig(BaseModel):
+    """Configuration governing how positive hope impacts internal resilience"""
+    trigger_threshold: float = Field(default=0.4, description="高希望度沉淀门槛")
+    competence_gain: float = Field(default=0.03, description="信念核心增长步长")
+    faith_shield_multiplier: float = Field(default=0.5, description="希望转化为护盾的物理系数")
+    max_faith_shield: float = Field(default=0.8, description="动态护盾充电上限")
+    faith_shield_decay: float = Field(default=0.04, description="失去希望时护盾自然流失步长")
+
+class HardshipResilienceConfig(BaseModel):
+    """Settings managing state protection lines while navigating stressors"""
+    min_faith_shield_active: float = Field(default=0.1, description="护盾抗性生效的最低残存阈值")
+    min_competence_active: float = Field(default=0.6, description="即便无护盾，维持高抗压的底线信念")
+    min_valence_active: float = Field(default=-0.1, description="维持高抗压的最低心情边界值")
+    giving_up_suppression: float = Field(default=0.1, description="有信念时困境放弃意愿被压制的压制步长")
+    valence_floor_protected: float = Field(default=-0.2, description="有护盾时保护的心情谷底低限")
+
+class DespairCollapseConfig(BaseModel):
+    """System degradation metrics for broken, unshielded agents during hardship"""
+    giving_up_avalanche: float = Field(default=0.25, description="绝望后放弃意愿狂飙步长")
+    competence_drain: float = Field(default=0.1, description="信心雪崩崩塌速度步长")
+    valence_drain: float = Field(default=0.2, description="心情疯狂下坠的速度步长")
+    valence_floor_unprotected: float = Field(default=-1.0, description="无护盾未受保护的心情极限谷底")
+
+class RecoveryConfig(BaseModel):
+    """Calm state calibration after leaving hostile environmental factors"""
+    giving_up_recovery: float = Field(default=0.1, description="脱离困境后放弃意愿自然冷却复原速率")
+
 class PsychologicalStateConfig(BaseModel):
     """Configuration data governing emotional baseline decay and internal belief vectors"""
     default_base_valence: float = Field(default=0.0, description="默认初始/基线愉悦度 (Valence)")
@@ -81,6 +108,10 @@ class PsychologicalStateConfig(BaseModel):
     default_competence: float = Field(default=0.7, description="初始必胜信念核心（内在成就感满足度基准值）")
     initial_faith_shield: float = Field(default=0.0, description="初次启动时的动态坚韧护盾值")
     initial_giving_up_rate: float = Field(default=0.0, description="初次启动时的困境放弃意愿/摆烂度起点")
+    hope_precipitation: HopePrecipitationConfig = Field(default_factory=HopePrecipitationConfig)
+    hardship_resilience: HardshipResilienceConfig = Field(default_factory=HardshipResilienceConfig)
+    despair_collapse: DespairCollapseConfig = Field(default_factory=DespairCollapseConfig)
+    recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
 
 class EngineConfig(BaseModel):
     """全局数字人情感引擎声明式配置中心"""

@@ -29,28 +29,36 @@ class MoodLayer:
         self.valence += (self.baseline_valence - self.valence) * self.decay_rate
         self.arousal += (self.baseline_arousal - self.arousal) * self.decay_rate
 
+        state_cfg = self.config.psychological_state
+        hope_cfg = state_cfg.hope_precipitation
+        res_cfg = state_cfg.hardship_resilience
+        col_cfg = state_cfg.despair_collapse
+        rec_cfg = state_cfg.recovery
+
         # 信念沉淀机制
-        if current_hope > 0.4:
-            self.competence = min(1.0, self.competence + 0.03)
-            self.faith_shield = min(0.8, self.faith_shield + current_hope * 0.5)
+        if current_hope > hope_cfg.trigger_threshold:
+            self.competence = min(1.0, self.competence + hope_cfg.competence_gain)
+            self.faith_shield = min(hope_cfg.max_faith_shield, self.faith_shield + current_hope * hope_cfg.faith_shield_multiplier)
         else:
-            self.faith_shield = max(0.0, self.faith_shield - 0.04)
+            self.faith_shield = max(0.0, self.faith_shield - hope_cfg.faith_shield_decay)
 
         # 🌟 核心机制：有信念 vs 无信念在困境中的分化
         if in_hardship:
+            has_active_shield = self.faith_shield > res_cfg.min_faith_shield_active
+            has_inner_confidence = self.competence > res_cfg.min_competence_active and self.valence > res_cfg.min_valence_active
             # 只有当坚韧护盾尚存(>0.1)，或者内心极度自信且目前心情还没彻底绝望时，才能坚持
-            if self.faith_shield > 0.1 or (self.competence > 0.6 and self.valence > -0.1):
+            if has_active_shield or has_inner_confidence:
                 # 【有信念/有护盾】：在困境中，放弃意愿被强力压制
-                self.giving_up_rate = max(0.0, self.giving_up_rate - 0.1)
-                self.valence = max(-0.2, self.valence)  # 锁住心情低谷
+                self.giving_up_rate = max(0.0, self.giving_up_rate - res_cfg.giving_up_suppression)
+                self.valence = max(res_cfg.valence_floor_protected, self.valence)  # 锁住心情低谷
             else:
                 # 【没有信念/护盾耗尽且心情绝望】：放弃意愿开始狂飙，信心也随之雪崩
-                self.giving_up_rate = min(1.0, self.giving_up_rate + 0.25)
-                self.competence = max(0.0, self.competence - 0.1)  # 信心发生雪崩
-                self.valence = max(-1.0, self.valence - 0.2)  # 心情疯狂下坠
+                self.giving_up_rate = min(1.0, self.giving_up_rate + col_cfg.giving_up_avalanche)
+                self.competence = max(0.0, self.competence - col_cfg.competence_drain)  # 信心发生雪崩
+                self.valence = max(col_cfg.valence_floor_unprotected, self.valence - col_cfg.valence_drain)  # 心情疯狂下坠
         else:
             # 退出困境后，放弃意愿缓慢平复
-            self.giving_up_rate = max(0.0, self.giving_up_rate - 0.1)
+            self.giving_up_rate = max(0.0, self.giving_up_rate - res_cfg.giving_up_recovery)
 
     def apply_physiological_impact(self, delta_v: float, delta_a: float):
         """外部直接打击：由于信念护盾的存在，可以拦截伤害"""
