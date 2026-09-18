@@ -1,17 +1,20 @@
 import random
+from src.models.psi.engine_config import EngineConfig
 from src.logger_singleton import logger
 
 class MBTIToOCCEngine:
     def __init__(self):
         # Base mapping dict defining default values for each MBTI trait character
         # High value = closer to 1.0, Low value = closer to 0.0
-        self.trait_ranges = {
-            'E': (0.65, 0.90), 'I': (0.10, 0.35),  # Maps to Extraversion
-            'N': (0.65, 0.90), 'S': (0.10, 0.35),  # Maps to Openness
-            'F': (0.65, 0.90), 'T': (0.10, 0.35),  # Maps to Agreeableness
-            'J': (0.65, 0.90), 'P': (0.10, 0.35),  # Maps to Conscientiousness
-            'T_suffix': (0.65, 0.90), 'A_suffix': (0.10, 0.35)  # Maps to Neuroticism
-        }
+        # self.trait_ranges = {
+        #     'E': (0.65, 0.90), 'I': (0.10, 0.35),  # Maps to Extraversion
+        #     'N': (0.65, 0.90), 'S': (0.10, 0.35),  # Maps to Openness
+        #     'F': (0.65, 0.90), 'T': (0.10, 0.35),  # Maps to Agreeableness
+        #     'J': (0.65, 0.90), 'P': (0.10, 0.35),  # Maps to Conscientiousness
+        #     'T_suffix': (0.65, 0.90), 'A_suffix': (0.10, 0.35)  # Maps to Neuroticism
+        # }
+        logger.debug("MBTIToOCCEngine...init")
+        self.engine_config = EngineConfig()
 
     def convert_mbti_to_ocean(self, mbti_string: str) -> dict:
         """
@@ -34,13 +37,17 @@ class MBTIToOCCEngine:
         # Extract MBTI components
         mbti_e_i, mbti_n_s, mbti_t_f, mbti_p_j = base_mbti[0], base_mbti[1], base_mbti[2], base_mbti[3]
 
+        ranges = self.config.mbti_ranges
+        default_range = ranges.DEFAULT
+
         # Generate continuous OCEAN scores using specific uniform distribution slices
+        suffix_key = f"{suffix}_s"
         ocean = {
-            "O": random.uniform(*self.trait_ranges.get(mbti_n_s, (0.4, 0.6))),
-            "C": random.uniform(*self.trait_ranges.get(mbti_p_j, (0.4, 0.6))),
-            "E": random.uniform(*self.trait_ranges.get(mbti_e_i, (0.4, 0.6))),
-            "A": random.uniform(*self.trait_ranges.get(mbti_t_f, (0.4, 0.6))),
-            "N": random.uniform(*self.trait_ranges.get(f"{suffix}_suffix", (0.4, 0.6)))
+            "O": random.uniform(*getattr(ranges, mbti_n_s, default_range)),
+            "C": random.uniform(*getattr(ranges, mbti_p_j, default_range)),
+            "E": random.uniform(*getattr(ranges, mbti_e_i, default_range)),
+            "A": random.uniform(*getattr(ranges, mbti_t_f, default_range)),
+            "N": random.uniform(*getattr(ranges, suffix_key, default_range))
         }
         logger.debug('Converting MBTI to OCEAN...end')
         return ocean
