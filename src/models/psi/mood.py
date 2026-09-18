@@ -1,4 +1,5 @@
 # filename: mood.py
+from src.models.psi.engine_config import EngineConfig
 
 class MoodLayer:
     """
@@ -7,17 +8,21 @@ class MoodLayer:
     2. 🌟 核心升级：融合 PSI 必胜信念与“困境放弃意愿”控制。
     """
 
-    def __init__(self, base_valence: float = 0.0, base_arousal: float = 0.0):
-        self.baseline_valence = base_valence
-        self.baseline_arousal = base_arousal
+    def __init__(self, config: EngineConfig, base_valence: float = None, base_arousal: float = None):
+        self.config = config
+        state_cfg = self.config.psychological_state
+        # 计算基线与当前情感维度（优先使用显式传递的入参，无入参时动态读取配置项）
+        self.baseline_valence = base_valence if base_valence is not None else state_cfg.default_base_valence
+        self.baseline_arousal = base_arousal if base_arousal is not None else state_cfg.default_base_arousal
         self.valence = base_valence
         self.arousal = base_arousal
-        self.decay_rate = 0.05
+        # 动态加载自然衰减系数
+        self.decay_rate = state_cfg.decay_rate
 
         # === 🌟 核心升级：信念与放弃系统 ===
-        self.competence = 0.7  # 必胜信念核心（内在成就感满足度）
-        self.faith_shield = 0.0  # 动态坚韧护盾
-        self.giving_up_rate = 0.0  # 困境放弃意愿/崩溃度 [0.0, 1.0]，1.0 代表彻底放弃、摆烂
+        self.competence = state_cfg.default_competence  # 必胜信念核心（内在成就感满足度）
+        self.faith_shield = state_cfg.initial_faith_shield  # 动态坚韧护盾
+        self.giving_up_rate = state_cfg.initial_giving_up_rate  # 困境放弃意愿/崩溃度 [0.0, 1.0]，1.0 代表彻底放弃、摆烂
 
     def update_decay(self, current_hope: float, in_hardship: bool):
         """主时钟 Tick：计算中期信念的消耗，以及无信念者在困境中的放弃速度"""

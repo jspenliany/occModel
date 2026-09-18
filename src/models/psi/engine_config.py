@@ -71,7 +71,19 @@ class OccEngineConfig(BaseModel):
         }
     )
 
+class PsychologicalStateConfig(BaseModel):
+    """Configuration data governing emotional baseline decay and internal belief vectors"""
+    default_base_valence: float = Field(default=0.0, description="默认初始/基线愉悦度 (Valence)")
+    default_base_arousal: float = Field(default=0.0, description="默认初始/基线激活度 (Arousal)")
+    decay_rate: float = Field(default=0.05, description="情感向基线状态自然衰减的速度率")
+
+    # 信念与放弃系统
+    default_competence: float = Field(default=0.7, description="初始必胜信念核心（内在成就感满足度基准值）")
+    initial_faith_shield: float = Field(default=0.0, description="初次启动时的动态坚韧护盾值")
+    initial_giving_up_rate: float = Field(default=0.0, description="初次启动时的困境放弃意愿/摆烂度起点")
+
 class EngineConfig(BaseModel):
     """全局数字人情感引擎声明式配置中心"""
     mbti_ranges: TraitRangeConfig = Field(default_factory=TraitRangeConfig)
     occ_engine: OccEngineConfig = Field(default_factory=OccEngineConfig)
+    psychological_state: PsychologicalStateConfig = Field(default_factory=PsychologicalStateConfig)
