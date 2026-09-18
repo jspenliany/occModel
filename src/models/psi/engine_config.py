@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 from pydantic import BaseModel, Field
 
 class TraitRangeConfig(BaseModel):
@@ -22,6 +22,56 @@ class TraitRangeConfig(BaseModel):
     # 缺省兜底区间
     DEFAULT: Tuple[float, float] = Field(default=(0.4, 0.6), description="当MBTI字符非法时的中庸兜底区间")
 
+class ThresholdConfig(BaseModel):
+    """Configuration for baseline emotional thresholds"""
+    base_multiplier: float = Field(..., description="基础阈值系数")
+    ocean_trait: str = Field(..., description="关联的 OCEAN 人格特质键名 (O/C/E/A/N)")
+    invert_trait: bool = Field(default=False, description="是否对人格特质执行反转计算 (1.0 - trait)")
+
+class CompoundConfig(BaseModel):
+    """Configuration for compound emotion coefficients"""
+    base_offset: float = Field(default=1.0, description="基础偏移常数")
+    ocean_trait: str = Field(..., description="关联的 OCEAN 人格特质键名")
+    invert_trait: bool = Field(default=False, description="是否对人格特质执行反转计算")
+
+class EmotionFormulaConfig(BaseModel):
+    """Declarative setup for an OCC emotion's math pipeline"""
+    threshold: ThresholdConfig = Field(..., description="阈值配置")
+    personality_multipliers: list[CompoundConfig] = Field(
+        default_factory=list,
+        description="应用于原始刺激强度的所有人格加权系数列表"
+    )
+
+class OccEngineConfig(BaseModel):
+    """Global configuration data for the OCC formula parser"""
+    emotions: Dict[str, EmotionFormulaConfig] = Field(
+        default_factory=lambda: {
+            "Joy": EmotionFormulaConfig(
+                threshold=ThresholdConfig(base_multiplier=0.4, ocean_trait="E", invert_trait=True),
+                personality_multipliers=[CompoundConfig(base_offset=1.0, ocean_trait="E", invert_trait=False)]
+            ),
+            "Distress": EmotionFormulaConfig(
+                threshold=ThresholdConfig(base_multiplier=0.5, ocean_trait="N", invert_trait=True),
+                personality_multipliers=[CompoundConfig(base_offset=1.0, ocean_trait="N", invert_trait=False)]
+            ),
+            "Anger": EmotionFormulaConfig(
+                threshold=ThresholdConfig(base_multiplier=0.6, ocean_trait="A", invert_trait=False),
+                personality_multipliers=[
+                    CompoundConfig(base_offset=1.5, ocean_trait="A", invert_trait=True),
+                    CompoundConfig(base_offset=1.0, ocean_trait="N", invert_trait=False)
+                ]
+            ),
+            "Remorse": EmotionFormulaConfig(
+                threshold=ThresholdConfig(base_multiplier=0.5, ocean_trait="C", invert_trait=True),
+                personality_multipliers=[
+                    CompoundConfig(base_offset=1.0, ocean_trait="C", invert_trait=False),
+                    CompoundConfig(base_offset=1.0, ocean_trait="N", invert_trait=False)
+                ]
+            )
+        }
+    )
+
 class EngineConfig(BaseModel):
     """全局数字人情感引擎声明式配置中心"""
     mbti_ranges: TraitRangeConfig = Field(default_factory=TraitRangeConfig)
+    occ_engine: OccEngineConfig = Field(default_factory=OccEngineConfig)
