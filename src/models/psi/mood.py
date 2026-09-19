@@ -10,7 +10,7 @@ class MoodLayer:
 
     def __init__(self, config: EngineConfig, base_valence: float = None, base_arousal: float = None):
         self.config = config
-        state_cfg = self.config.psychological_state
+        state_cfg = config.psychological_state
         # 计算基线与当前情感维度（优先使用显式传递的入参，无入参时动态读取配置项）
         self.baseline_valence = base_valence if base_valence is not None else state_cfg.default_base_valence
         self.baseline_arousal = base_arousal if base_arousal is not None else state_cfg.default_base_arousal

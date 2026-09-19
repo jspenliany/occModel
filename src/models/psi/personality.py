@@ -11,11 +11,11 @@ class PersonalityLayer:
     3. 🌟 新增：提供外部降维打击接口（顿悟/权威书籍反转）。
     """
 
-    def __init__(self, mbti_string: str, engine_config: EngineConfig):
-        self.config = engine_config
+    def __init__(self, mbti_string: str):
+        self.config = EngineConfig()
         self.mbti = mbti_string.upper().strip()
         engine_tool = MBTIToOCCEngine()
-        self.ocean = engine_tool.convert_mbti_to_ocean(self.mbti, engine_config=engine_config)
+        self.ocean = engine_tool.convert_mbti_to_ocean(self.mbti, engine_config=self.config)
 
 
     def get_trait(self, trait_name: str) -> float:

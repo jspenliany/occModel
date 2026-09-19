@@ -10,7 +10,7 @@ class PSI3DGlassBridge:
         self.p_layer = PersonalityLayer(mbti_type)
         init_v = (self.p_layer.get_trait("E") - self.p_layer.get_trait("N")) * 0.3
         init_a = (self.p_layer.get_trait("E") + self.p_layer.get_trait("N") - 1.0) * 0.2
-        self.m_layer = MoodLayer(base_valence=init_v, base_arousal=init_a)
+        self.m_layer = MoodLayer(self.p_layer.config,base_valence=init_v, base_arousal=init_a)
         self.e_layer = OCCEmotionLayer()
 
         # 习惯闭环累积器
