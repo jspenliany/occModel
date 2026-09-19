@@ -182,6 +182,11 @@ def benchmark_pair_mbti():
     dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt)
     logger.info(f"debug basic information {dog_istja.to_dict()}")
     logger.info(f"debug basic information {dog_enfpt.to_dict()}")
+    logger.info("===================red pair=====================")
+    red_entja = PSI3DGlassBridge(mbti_red_entja)
+    red_isfjt = PSI3DGlassBridge(mbti_red_isfjt)
+    logger.info(f"debug basic information {red_entja.to_dict()}")
+    logger.info(f"debug basic information {red_isfjt.to_dict()}")
 
 if __name__ == "__main__":
     # run_avatar_pipeline()
