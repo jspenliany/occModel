@@ -1,11 +1,18 @@
 # filename: main.py
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from src.logger_singleton import logger
 from models.psi.bridge import PSI3DGlassBridge
 from prompts.prompt_renderer import LLMPromptRenderer
 from src.pattern.lore_factory import DynamicLoreFactory
-
+from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam
+)
 
 def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
     # 1. Initialize the core PSI 3D-Glass engine with a concrete MBTI archetype
@@ -168,6 +175,26 @@ def run_integrated_lifecycle_test():
     # logger.info(furious_prompt)
 
 def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
+    llm_client = OpenAI(
+        base_url="http://0.0.0.0:8000/v1",
+        api_key=""
+    )
+    system_message_list = ChatCompletionMessageParam()
+    system_message_list
+    llm_client.chat.completions.create(
+        model="google/gemma-4-31b-it",
+        messages=[
+            ChatCompletionSystemMessageParam(
+                role = "system",
+                content= "",
+            ),
+            ChatCompletionUserMessageParam(
+                role = "user",
+                content="",
+            ),
+        ],
+
+    )
     mbti_cat_intja = "INTJ-A"  #极端理性构建者
     mbti_cat_esfpt = "ESFP-T"  #极端感性体验者
 
