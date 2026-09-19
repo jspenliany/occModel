@@ -1,17 +1,21 @@
 # filename: main.py
+from openai import OpenAI
+
 from src.logger_singleton import logger
 from models.psi.bridge import PSI3DGlassBridge
 from prompts.prompt_renderer import LLMPromptRenderer
+from src.pattern.lore_factory import DynamicLoreFactory
 
 
-def run_avatar_pipeline():
+def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
     # 1. Initialize the core PSI 3D-Glass engine with a concrete MBTI archetype
     avatar = PSI3DGlassBridge("INFP-T")
 
     # 2. Initialize the completely decoupled Prompt Rendering Module
     renderer = LLMPromptRenderer(
         character_name="Elysia",
-        core_lore="A brilliant but reclusive software engineer who prefers maintaining code over human conversations."
+        profession = "software engineer",
+        lore_factory = lore_factory,
     )
 
     logger.info("====== STEP 1: INITIAL STABLE STATE ======")
@@ -163,7 +167,7 @@ def run_integrated_lifecycle_test():
     # furious_prompt = renderer.render_system_prompt(furious_state)
     # logger.info(furious_prompt)
 
-def benchmark_pair_mbti():
+def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     mbti_cat_intja = "INTJ-A"  #极端理性构建者
     mbti_cat_esfpt = "ESFP-T"  #极端感性体验者
 
@@ -181,12 +185,14 @@ def benchmark_pair_mbti():
     render_cat_esfpt = cat_esfpt.get_current_avatar_state()
     prompt_cat_intja = LLMPromptRenderer(
         character_name = "cat_intja",
-        core_lore = "A brilliant but reclusive software engineer who prefers maintaining code over human conversations.",
+        profession = "software engineer",
+        lore_factory = lore_factory,
     )
     logger.info(f"debug basic information {prompt_cat_intja.render_system_prompt(render_cat_intja)}")
     prompt_cat_esfpt = LLMPromptRenderer(
         character_name="cat_esfpt",
-        core_lore="A brilliant but reclusive software engineer who prefers maintaining code over human conversations.",
+        profession="brilliant singer",
+        lore_factory=lore_factory,
     )
     logger.info(f"debug basic information {prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)}")
     logger.info("===================dog pair=====================")
@@ -201,7 +207,8 @@ def benchmark_pair_mbti():
     logger.info(f"debug basic information {red_isfjt.to_dict()}")
 
 if __name__ == "__main__":
-    # run_avatar_pipeline()
+    lore_factory = DynamicLoreFactory()
+    # run_avatar_pipeline(lore_factory)
     # debug_avatar_pipeline()
     # run_integrated_lifecycle_test()
-    benchmark_pair_mbti()
+    benchmark_pair_mbti(lore_factory)
