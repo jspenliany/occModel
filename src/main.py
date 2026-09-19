@@ -177,6 +177,18 @@ def benchmark_pair_mbti():
     cat_esfpt = PSI3DGlassBridge(mbti_cat_esfpt)
     logger.info(f"debug basic information {cat_intja.to_dict()}")
     logger.info(f"debug basic information {cat_esfpt.to_dict()}")
+    render_cat_intja = cat_intja.get_current_avatar_state()
+    render_cat_esfpt = cat_esfpt.get_current_avatar_state()
+    prompt_cat_intja = LLMPromptRenderer(
+        character_name = "cat_intja",
+        core_lore = "A brilliant but reclusive software engineer who prefers maintaining code over human conversations.",
+    )
+    logger.info(f"debug basic information {prompt_cat_intja.render_system_prompt(render_cat_intja)}")
+    prompt_cat_esfpt = LLMPromptRenderer(
+        character_name="cat_esfpt",
+        core_lore="A brilliant but reclusive software engineer who prefers maintaining code over human conversations.",
+    )
+    logger.info(f"debug basic information {prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)}")
     logger.info("===================dog pair=====================")
     dog_istja = PSI3DGlassBridge(mbti_dog_istja)
     dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt)
