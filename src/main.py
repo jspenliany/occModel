@@ -1,7 +1,4 @@
 # filename: main.py
-from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam
-
 from src.logger_singleton import logger
 from models.psi.bridge import PSI3DGlassBridge
 from prompts.prompt_renderer import LLMPromptRenderer
@@ -13,6 +10,7 @@ from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam
 )
+from src.message.message_hist import AvatarChatHistory
 
 def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
     # 1. Initialize the core PSI 3D-Glass engine with a concrete MBTI archetype
@@ -177,24 +175,10 @@ def run_integrated_lifecycle_test():
 def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     llm_client = OpenAI(
         base_url="http://0.0.0.0:8000/v1",
-        api_key=""
+        api_key="no-key-required"
     )
-    system_message_list = ChatCompletionMessageParam()
-    system_message_list
-    llm_client.chat.completions.create(
-        model="google/gemma-4-31b-it",
-        messages=[
-            ChatCompletionSystemMessageParam(
-                role = "system",
-                content= "",
-            ),
-            ChatCompletionUserMessageParam(
-                role = "user",
-                content="",
-            ),
-        ],
+    history_manager = AvatarChatHistory(max_turns=10)
 
-    )
     mbti_cat_intja = "INTJ-A"  #极端理性构建者
     mbti_cat_esfpt = "ESFP-T"  #极端感性体验者
 
@@ -215,13 +199,52 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
         profession = "software engineer",
         lore_factory = lore_factory,
     )
-    logger.info(f"debug basic information {prompt_cat_intja.render_system_prompt(render_cat_intja)}")
+    cat_intja_content = prompt_cat_intja.render_system_prompt(render_cat_intja)
+    logger.info(f"debug basic information {cat_intja_content}")
     prompt_cat_esfpt = LLMPromptRenderer(
         character_name="cat_esfpt",
         profession="brilliant singer",
         lore_factory=lore_factory,
     )
-    logger.info(f"debug basic information {prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)}")
+    cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)
+    logger.info(f"debug basic information {cat_esfpt_content}")
+
+    # send request to llm
+    try:
+        user_message = "怎么做明年的计划啊？"
+        cat_intja_response = llm_client.chat.completions.create(
+            model="google/gemma-4-31b-it",
+            messages=[
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=cat_intja_content,
+                ),
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=user_message,
+                ),
+            ],
+            temperature=0.1,
+        )
+        cat_esfpt_response = llm_client.chat.completions.create(
+            model="google/gemma-4-31b-it",
+            messages=[
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=cat_esfpt_content,
+                ),
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=user_message,
+                ),
+            ],
+            temperature=0.1,
+        )
+        logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
+        logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
+    except Exception as e:
+        logger.info(e)
+
     logger.info("===================dog pair=====================")
     dog_istja = PSI3DGlassBridge(mbti_dog_istja)
     dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt)
