@@ -217,28 +217,38 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             messages=[
                 ChatCompletionSystemMessageParam(
                     role="system",
-                    content=cat_intja_content,
+                    content=(
+                        f"{cat_intja_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
+                        "- Keep your response extremely brief, casual, and punchy.\n"
+                        "- Do NOT exceed 200 words under any circumstances.\n"
+                        "- Express your high-energy personality and chaotic emotion within this short limit."
+                    ),
                 ),
                 ChatCompletionUserMessageParam(
                     role="user",
                     content=user_message,
                 ),
             ],
-            temperature=0.1,
+            temperature=0.4,
+            max_tokens=300,
         )
         cat_esfpt_response = llm_client.chat.completions.create(
             model="google/gemma-4-31b-it",
             messages=[
                 ChatCompletionSystemMessageParam(
                     role="system",
-                    content=cat_esfpt_content,
-                ),
+                    content=f"{cat_esfpt_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
+                        "- Keep your response extremely brief, casual, and punchy.\n"
+                        "- Do NOT exceed 200 words under any circumstances.\n"
+                        "- Express your high-energy personality and chaotic emotion within this short limit."
+                    ),
                 ChatCompletionUserMessageParam(
                     role="user",
                     content=user_message,
                 ),
             ],
-            temperature=0.1,
+            temperature=0.4,
+            max_tokens=300,
         )
         logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
         logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
