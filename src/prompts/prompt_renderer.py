@@ -1,5 +1,6 @@
 ### filename: prompt_renderer.py
 from src.logger_singleton import logger
+from src.pattern.lore_factory import DynamicLoreFactory
 
 class LLMPromptRenderer:
     """
@@ -7,9 +8,10 @@ class LLMPromptRenderer:
     Translates structural states (Personality, Mood, Emotion) from the PSI framework
     into highly explicit instructions that force LLMs to output matching dialog and behavior.
     """
-    def __init__(self, character_name: str, core_lore: str):
+    def __init__(self, character_name: str, profession: str, lore_factory: DynamicLoreFactory):
         self.character_name = character_name
-        self.core_lore = core_lore
+        self.profession = profession
+        self.lore_factory = lore_factory
 
     def _interpret_mood(self, avatar_state: dict) -> str:
         """
@@ -69,14 +71,18 @@ class LLMPromptRenderer:
         emotion_desc = self._interpret_dominant_emotions(avatar_state.get("active_emotions", {}))
 
         # Format the continuous traits list cleanly for downstream context
-        dna_str = ", ".join([f"{k}: {v}" for k, v in avatar_state.get("ocean_dna", {}).items()])
+        ocean_dna = avatar_state.get("ocean_dna", {})
+        dna_str = ", ".join([f"{k}: {v}" for k, v in ocean_dna.items()])
+
+        #get core_lore
+        core_lore = self.lore_factory.create_core_lore(self.profession, mbti, ocean_dna)
 
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
 
 You are an advanced digital avatar simulating an autonomous human psyche.
 Name: {self.character_name}
-Background Core Lore: {self.core_lore} 
+Background Core Lore: {core_lore} 
 
 ### COGNITIVE PERSONALITY ENGINE STATE (PSI-DNA)
 
