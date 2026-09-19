@@ -172,11 +172,16 @@ def benchmark_pair_mbti():
 
     mbti_red_entja = "ENTJ-A"  #指挥官
     mbti_red_isfjt = "ISFJ-T"  #隐忍的守护者
-
+    logger.info("====================cat pair====================")
     cat_intja = PSI3DGlassBridge(mbti_cat_intja)
     cat_esfpt = PSI3DGlassBridge(mbti_cat_esfpt)
     logger.info(f"debug basic information {cat_intja.to_dict()}")
     logger.info(f"debug basic information {cat_esfpt.to_dict()}")
+    logger.info("===================dog pair=====================")
+    dog_istja = PSI3DGlassBridge(mbti_dog_istja)
+    dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt)
+    logger.info(f"debug basic information {dog_istja.to_dict()}")
+    logger.info(f"debug basic information {dog_enfpt.to_dict()}")
 
 if __name__ == "__main__":
     # run_avatar_pipeline()
