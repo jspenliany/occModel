@@ -11,22 +11,32 @@ class LLMPromptRenderer:
         self.character_name = character_name
         self.core_lore = core_lore
 
-    def _interpret_mood(self, mood: dict) -> str:
-        """Translates numerical Valence and Arousal variables into clear behaviors."""
-        logger.debug("Interpreting mood...begin")
-        v = mood.get("valence", 0.0)
-        a = mood.get("arousal", 0.0)
-        logger.debug("Interpreting mood...v: {v}  a: {a}".format(v=v, a=a))
-        if v >= 0.3 and a >= 0.3:
-            return "Highly excited, energetic, exceptionally proactive, and expressive."
-        elif v >= 0.3 and a < -0.3:
-            return "Calm, deeply relaxed, serene, peaceful, and thoroughly content."
-        elif v < -0.3 and a >= 0.3:
-            return "Hostile, highly agitated, tense, easily triggered, or defensive."
-        elif v < -0.3 and a < -0.3:
-            return "Sullen, emotionally drained, exhausted, unresponsive, and clinically unmotivated."
+    def _interpret_mood(self, avatar_state: dict) -> str:
+        """
+        辅助方法：根据心情向量和放弃率，转化为 LLM 容易理解的人性化行为指令描述。
+        """
+        valence = avatar_state.get("mood_valence", 0.0)
+        arousal = avatar_state.get("mood_arousal", 0.0)
+        giving_up = avatar_state.get("giving_up_rate", 0.0)
+        competence = avatar_state.get("competence", 0.7)
+
+        # 1. 优先结算极端绝望或摆烂状态
+        if giving_up > 0.7:
+            return "Thoroughly broken and disillusioned. Rejecting efforts, displaying heavy flat affect, and emotionally checking out."
+        if competence < 0.3 and valence < -0.4:
+            return "Deeply vulnerable and existential. Crushed confidence, feeling hopeless, questioning self-worth."
+
+        # 2. 常规 2D 情感象限空间划分
+        if valence >= 0.3 and arousal >= 0.3:
+            return "Highly energetic, passionate, open-minded, and proactively communicative."
+        elif valence >= 0.3 and arousal <= -0.3:
+            return "Serene, composed, deeply peaceful, and reflective."
+        elif valence <= -0.3 and arousal >= 0.3:
+            return "Hostile, highly defensive, erratic, or intensely anxious."
+        elif valence <= -0.3 and arousal <= -0.3:
+            return "Subdued, heavily withdrawn, speaking in brief sentences, low cognitive effort."
         else:
-            return "Neutral, composed, steady, and emotionally balanced."
+            return "Calm, balanced, and maintaining an objective conversational baseline."
 
     def _interpret_dominant_emotions(self, emotions: dict) -> list:
         """Filters short-term spikes to isolate primary active triggers."""
@@ -38,10 +48,10 @@ class LLMPromptRenderer:
             return ["No intense immediate emotional triggers active."]
 
         descriptions = {
-        "Joy": "Experiencing immediate internal validation, pleasure, or deep satisfaction.",
-        "Distress": "Suffering from cognitive dissonance, personal loss, or acute disappointment.",
-        "Anger": "Experiencing active indignation or hostility regarding a targeted blameworthy action.",
-        "Remorse": "Weighed down by intense self-blame, inner guilt, or regret over personal performance."
+            "Joy": "Experiencing immediate internal validation, pleasure, or deep satisfaction.",
+            "Distress": "Suffering from cognitive dissonance, personal loss, or acute disappointment.",
+            "Anger": "Experiencing active indignation or hostility regarding a targeted blameworthy action.",
+            "Remorse": "Weighed down by intense self-blame, inner guilt, or regret over personal performance."
         }
         logger.debug("Interpreting dominant emotions...end")
         return [descriptions.get(emo, f"Feeling active {emo}.") for emo in active]
@@ -53,43 +63,51 @@ class LLMPromptRenderer:
         """
         logger.debug("Rendering system prompt...begin")
         mbti = avatar_state.get("mbti", "UNKNOWN")
-        mood_desc = self._interpret_mood(avatar_state.get("current_mood", {}))
-        emotion_descs = self._interpret_dominant_emotions(avatar_state.get("active_emotions", {}))
-        ### Format the continuous traits list cleanly for downstream context
 
+        # 🌟 优化：直接将扁平化的 avatar_state 传入心情解析器
+        mood_desc = self._interpret_mood(avatar_state)
+        emotion_desc = self._interpret_dominant_emotions(avatar_state.get("active_emotions", {}))
+
+        # Format the continuous traits list cleanly for downstream context
         dna_str = ", ".join([f"{k}: {v}" for k, v in avatar_state.get("ocean_dna", {}).items()])
 
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
-        
-        You are an advanced digital avatar simulating an autonomous human psyche.
-        Name: {self.character_name}
-        Background Core Lore: {self.core_lore} 
-        
-        ### COGNITIVE PERSONALITY ENGINE STATE (PSI-DNA)
-        
-        * Baseline Profile: {mbti}
-        * Active OCEAN Factor Weights: {dna_str}
-        
-        ### CURRENT PSYCHOLOGICAL STATUS (3D-GLASS ARCHITECTURE)
-        
-        1. MID-TERM MOOD STATE: 
-        
-          * Explicit Behavioral Profile: {mood_desc}
-          * Numerical Vectors: Valence={avatar_state['current_mood']['valence']}, Arousal={avatar_state['current_mood']['arousal']}
-        2. SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
-        """
-        for desc in emotion_descs:
-            system_prompt += f"   - [Active Spike] {desc}\n"
+
+You are an advanced digital avatar simulating an autonomous human psyche.
+Name: {self.character_name}
+Background Core Lore: {self.core_lore} 
+
+### COGNITIVE PERSONALITY ENGINE STATE (PSI-DNA)
+
+* Baseline Profile: {mbti}
+* Active OCEAN Factor Weights: {dna_str}
+
+### CURRENT PSYCHOLOGICAL STATUS (3D-GLASS ARCHITECTURE)
+
+1. MID-TERM MOOD STATE: 
+
+   * Explicit Behavioral Profile: {mood_desc}
+   * Numerical Vectors: Valence={avatar_state.get('mood_valence', 0.0)}, Arousal={avatar_state.get('mood_arousal', 0.0)}
+   * Internal Resilience Core: Competence(必胜信念)={avatar_state.get('competence', 0.7)}, Faith Shield(精神护盾)={avatar_state.get('faith_shield', 0.0)}, Giving-up Rate(放弃摆烂度)={avatar_state.get('giving_up_rate', 0.0)}
+
+2. SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
+"""
+        if emotion_desc:
+            for desc in emotion_desc:
+                system_prompt += f"   - [Active Spike] {desc}\n"
+        else:
+            system_prompt += "   - [Active Spike] None (Emotional baseline is calm/neutral)\n"
 
         system_prompt += f"""
-        
-        ### SYSTEM DIALOGUE OUTPUT RULES
-        
-        1. You MUST blend your foundational personality parameters ({mbti}) with your current physiological constraints.
-        2. Your pacing, vocabulary complexity, sentence length, and tone MUST align perfectly with your active Mood and OCC emotional spikes.
-        3. If Anger or Distress is active, your text generation should naturally display defensive or evasive characteristics matching your profile.
-        4. Avoid breaking character or commenting on these backend rules. Output only the authentic vocal dialogue of {self.character_name}.
-        """
+### SYSTEM DIALOGUE OUTPUT RULES
+
+1. You MUST blend your foundational personality parameters ({mbti}) with your current psychological and resilience constraints.
+2. Your pacing, vocabulary complexity, sentence length, and tone MUST align perfectly with your active Mood, Internal Resilience Core, and OCC emotional spikes.
+3. 🌟 SPECIAL CONSTRAINT (Despair & Resilience): 
+   - If Giving-up Rate is high (close to 1.0) or Competence is collapsed (close to 0.0), your dialogue should manifest profound defeatism, lack of effort, passive-aggressiveness, or complete emotional numbness.
+   - If Faith Shield is high, you remain textually resilient, stoic, or protective, even under environmental hardship or when Distress/Anger spikes are active.
+4. Avoid breaking character or commenting on these backend rules. Output only the authentic vocal dialogue of {self.character_name}.
+"""
         logger.debug("Rendering system prompt...end")
         return system_prompt.strip()
