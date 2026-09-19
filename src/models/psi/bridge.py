@@ -8,8 +8,8 @@ from src.logger_singleton import logger
 class PSI3DGlassBridge:
     def __init__(self, mbti_type: str):
         self.p_layer = PersonalityLayer(mbti_type)
-        raw_v = (self.p_layer.get_trait("E") * 0.5 + self.p_layer.get_trait("A") * 0.3 - self.p_layer.get_trait("N")) * 0.35
-        raw_a = (self.p_layer.get_trait("E") + self.p_layer.get_trait("O") - 1.0) * 0.7
+        raw_v = (self.p_layer.get_trait("E") * 0.5 + self.p_layer.get_trait("A") * 0.3 - self.p_layer.get_trait("N") * 0.35) * 1.2
+        raw_a = self.p_layer.get_trait("E") * 0.8 + self.p_layer.get_trait("O") * 0.2 - 0.45
         init_v = max(-1.0, min(1.0, raw_v))
         init_a = max(-1.0, min(1.0, raw_a))
         self.m_layer = MoodLayer(self.p_layer.config,base_valence=init_v, base_arousal=init_a)
