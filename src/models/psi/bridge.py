@@ -79,9 +79,7 @@ class PSI3DGlassBridge:
             "ocean_dna": {k: round(v, 3) for k, v in self.p_layer.ocean.items()},
             "mood_valence": round(self.m_layer.valence, 2),
             "mood_arousal": round(self.m_layer.arousal, 2),
-            # "current_mood": {"valence": round(self.m_layer.valence, 2), "arousal": round(self.m_layer.arousal, 2),
-            #                  "decay_rate": round(self.m_layer.decay_rate, 2), "competence": round(self.m_layer.competence, 2),
-            #                  "faith_shield": round(self.m_layer.faith_shield, 2),"giving_up_rate": round(self.m_layer.giving_up_rate, 2)},
+            "competence": round(self.m_layer.competence, 2),
             "giving_up_rate": round(self.m_layer.giving_up_rate, 2),
             "faith_shield": round(self.m_layer.faith_shield, 2),
             "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0}
