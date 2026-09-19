@@ -86,6 +86,19 @@ class HardshipResilienceConfig(BaseModel):
     min_valence_active: float = Field(default=-0.1, description="维持高抗压的最低心情边界值")
     giving_up_suppression: float = Field(default=0.1, description="有信念时困境放弃意愿被压制的压制步长")
     valence_floor_protected: float = Field(default=-0.2, description="有护盾时保护的心情谷底低限")
+    # 各状态轴的上下限三元组/二元组边界配置（采用 Tuple 形式生成）
+    valence_absolute_bounds: Tuple[float, float] = Field(
+        default=(-1.0, 1.0), description="愉悦度 (Valence) 的全系统绝对物理区间"
+    )
+    arousal_absolute_bounds: Tuple[float, float] = Field(
+        default=(-1.0, 1.0), description="激活度 (Arousal) 的全系统绝对物理区间"
+    )
+    competence_absolute_bounds: Tuple[float, float] = Field(
+        default=(0.0, 1.0), description="信念核心 (Competence) 的全系统绝对物理区间"
+    )
+    competence_wear_step: float = Field(
+        default=0.005, description="护盾拦截伤害时，轻微磨损信心的步长"
+    )
 
 class DespairCollapseConfig(BaseModel):
     """System degradation metrics for broken, unshielded agents during hardship"""

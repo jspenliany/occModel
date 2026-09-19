@@ -62,17 +62,24 @@ class MoodLayer:
 
     def apply_physiological_impact(self, delta_v: float, delta_a: float):
         """外部直接打击：由于信念护盾的存在，可以拦截伤害"""
+        hardship_cfg = self.config.psychological_state.hardship_resilience
+
+        # 🌟 从持有的 config 中动态解构 Tuple 绝对边界
+        v_min, v_max = hardship_cfg.valence_absolute_bounds
+        a_min, a_max = hardship_cfg.arousal_absolute_bounds
+        c_min, _ = hardship_cfg.competence_absolute_bounds
+
         if delta_v < 0 and self.faith_shield > 0:
             # 护盾按百分比完全吸收、冲抵痛苦
             mitigated_loss = delta_v * (1.0 - self.faith_shield)
-            self.valence = max(-1.0, min(1.0, self.valence + mitigated_loss))
-            self.competence = max(0.0, self.competence - 0.005)  # 轻微磨损信心
+            self.valence = max(v_min, min(v_max, self.valence + mitigated_loss))
+            self.competence = max(c_min, self.competence - hardship_cfg.competence_wear_step)  # 轻微磨损信心
         else:
             # 毫无防护，肉身接下打击，并受到放弃率的二次暴击放大
             amplified_loss = delta_v * (1.0 + self.giving_up_rate)
-            self.valence = max(-1.0, min(1.0, self.valence + amplified_loss))
+            self.valence = max(v_min, min(v_max, self.valence + amplified_loss))
 
-        self.arousal = max(-1.0, min(1.0, self.arousal + delta_a))
+        self.arousal = max(a_min, min(a_max, self.arousal + delta_a))
 
     def get_mood_multiplier(self) -> float:
         """情绪过滤器系数"""

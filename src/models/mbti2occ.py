@@ -16,7 +16,7 @@ class MBTIToOCCEngine:
         logger.debug("MBTIToOCCEngine...init")
         self.engine_config = EngineConfig()
 
-    def convert_mbti_to_ocean(self, mbti_string: str) -> dict:
+    def convert_mbti_to_ocean(self, mbti_string: str, engine_config: EngineConfig = None) -> dict:
         """
         Converts an MBTI string (e.g., 'INFP-T', 'INTJ-A') to an OCEAN profile.
         Values range between 0.0 and 1.0.
@@ -36,8 +36,8 @@ class MBTIToOCCEngine:
 
         # Extract MBTI components
         mbti_e_i, mbti_n_s, mbti_t_f, mbti_p_j = base_mbti[0], base_mbti[1], base_mbti[2], base_mbti[3]
-
-        ranges = self.config.mbti_ranges
+        cfg = engine_config if engine_config is not None else self.engine_config
+        ranges = cfg.mbti_ranges
         default_range = ranges.DEFAULT
 
         # Generate continuous OCEAN scores using specific uniform distribution slices
