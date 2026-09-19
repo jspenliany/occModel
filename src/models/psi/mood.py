@@ -83,9 +83,16 @@ class MoodLayer:
 
     def get_mood_multiplier(self) -> float:
         """情绪过滤器系数"""
-        base_multiplier = 1.0 - (self.valence * 0.5)
+        hardship_cfg = self.config.psychological_state.hardship_resilience
+        base_multiplier = 1.0 - (self.valence * hardship_cfg.mood_valence_impact_factor)
         # 如果已经产生了放弃心理，负面感受直接暴增；如果信心满满，则负面感受被大幅缩减
-        return base_multiplier * (1.2 - self.competence) * (1.0 + self.giving_up_rate)
+        # 信心满满 (competence 接近 1.0) 时，(offset - competence) 变小，负面感受被大幅缩减
+        # 产生放弃心理 (giving_up_rate 变大) 时，(base_offset + giving_up_rate) 变大，负面感受暴增
+        competence_factor = hardship_cfg.mood_competence_offset - self.competence
+        giving_up_factor = hardship_cfg.mood_giving_up_base_offset + self.giving_up_rate
+
+        # 融合返回最终乘数
+        return base_multiplier * competence_factor * giving_up_factor
 
     # 追加入 mood.py 的 MoodLayer 类中
     def to_dict(self) -> dict:

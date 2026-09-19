@@ -99,6 +99,15 @@ class HardshipResilienceConfig(BaseModel):
     competence_wear_step: float = Field(
         default=0.005, description="护盾拦截伤害时，轻微磨损信心的步长"
     )
+    mood_valence_impact_factor: float = Field(
+        default=0.5, description="愉悦度 (Valence) 转化为基础过滤器系数的物理权重（原 0.5）"
+    )
+    mood_competence_offset: float = Field(
+        default=1.2, description="信心核心 (Competence) 对负面感受缩减计算的基准偏移量（原 1.2）"
+    )
+    mood_giving_up_base_offset: float = Field(
+        default=1.0, description="放弃意愿 (Giving-up Rate) 对负面感受二次暴击放大的基准偏移量（原 1.0）"
+    )
 
 class DespairCollapseConfig(BaseModel):
     """System degradation metrics for broken, unshielded agents during hardship"""
