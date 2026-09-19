@@ -163,8 +163,23 @@ def run_integrated_lifecycle_test():
     # furious_prompt = renderer.render_system_prompt(furious_state)
     # logger.info(furious_prompt)
 
+def benchmark_pair_mbti():
+    mbti_cat_intja = "INTJ-A"  #极端理性构建者
+    mbti_cat_esfpt = "ESFP-T"  #极端感性体验者
+
+    mbti_dog_istja = "ISTJ-A"  #秩序捍卫者
+    mbti_dog_enfpt = "ENFP-T"  #自由理想主义者
+
+    mbti_red_entja = "ENTJ-A"  #指挥官
+    mbti_red_isfjt = "ISFJ-T"  #隐忍的守护者
+
+    cat_intja = PSI3DGlassBridge(mbti_cat_intja)
+    cat_esfpt = PSI3DGlassBridge(mbti_cat_esfpt)
+    logger.info(f"debug basic information {cat_intja.to_dict()}")
+    logger.info(f"debug basic information {cat_esfpt.to_dict()}")
 
 if __name__ == "__main__":
     # run_avatar_pipeline()
     # debug_avatar_pipeline()
-    run_integrated_lifecycle_test()
+    # run_integrated_lifecycle_test()
+    benchmark_pair_mbti()

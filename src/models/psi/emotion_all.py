@@ -219,3 +219,9 @@ class OCCEmotionLayer:
             self.active_emotions["Remorse"] = max(0.0, min(1.0, self.active_emotions["Remorse"] + (
                         abs(desirability) + abs(self_blameworthiness)) / 2 * trait_N))
         logger.debug(f"calculate_occ_spikes......end")
+
+    def to_dict(self):
+        return {
+            "emotions": self.active_emotions,
+            "decay_rate": self.decay_rate,
+        }
