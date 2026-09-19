@@ -237,11 +237,13 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             messages=[
                 ChatCompletionSystemMessageParam(
                     role="system",
-                    content=f"{cat_esfpt_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
+                    content=(
+                        f"{cat_esfpt_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
                         "- Keep your response extremely brief, casual, and punchy.\n"
                         "- Do NOT exceed 200 words under any circumstances.\n"
                         "- Express your high-energy personality and chaotic emotion within this short limit."
                     ),
+                ),
                 ChatCompletionUserMessageParam(
                     role="user",
                     content=user_message,
