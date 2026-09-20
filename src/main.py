@@ -214,14 +214,14 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
         lore_factory = lore_factory,
     )
     cat_intja_content = prompt_cat_intja.render_system_prompt(render_cat_intja)
-    logger.info(f"debug basic information {cat_intja_content}")
+    logger.debug(f"debug basic information {cat_intja_content}")
     prompt_cat_esfpt = LLMPromptRenderer(
         character_name="cat_esfpt",
         profession="brilliant singer",
         lore_factory=lore_factory,
     )
     cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)
-    logger.info(f"debug basic information {cat_esfpt_content}")
+    logger.debug(f"debug basic information {cat_esfpt_content}")
 
     #no-mbti and only rules
     prompt_no_mbti = LLMPromptRenderer(
@@ -243,7 +243,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             #update the occ model parameters
             render_cat_intja = cat_intja.get_current_avatar_state()
             cat_intja_delta = prompt_cat_intja.render_reflect_prompt(render_cat_intja)
-            logger.info(f"occ value delta estimate ({cat_intja.p_layer.mbti}): {cat_intja_delta}")
+            logger.debug(f"occ value delta estimate ({cat_intja.p_layer.mbti}): {cat_intja_delta}")
             delta_intja_response = llm_client.chat.completions.create(
                 model="google/gemma-4-31b-it",
                 messages=[
@@ -273,7 +273,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             cat_intja_content = prompt_cat_intja.render_system_prompt(new_render_cat_intja)
 
             cat_esfpt_delta = prompt_cat_esfpt.render_reflect_prompt(render_cat_esfpt)
-            logger.info(f"occ value delta estimate ({cat_esfpt.p_layer.mbti}): {cat_esfpt_delta}")
+            logger.debug(f"occ value delta estimate ({cat_esfpt.p_layer.mbti}): {cat_esfpt_delta}")
             delta_esfpt_response = llm_client.chat.completions.create(
                 model="google/gemma-4-31b-it",
                 messages=[
