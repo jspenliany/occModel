@@ -27,11 +27,21 @@ class DynamicLoreFactory:
         核心熔炼方法：将【真实职业】与【先天特征描述】完美融合成大模型无冲突的提示词
         """
         mbti_upper = mbti_type.upper().strip()
-        quadrant = mbti_upper[1:3] if len(mbti_upper) >= 4 else "NT"  # 提取 NT/SJ/SP/NF 派系
-        if quadrant not in cls.COGNITIVE_STYLE_MAP:
+        if len(mbti_upper) >= 4:
+            if mbti_upper[1] == 'N':
+                # 直觉型看第 3 位 (NT / NF)
+                quadrant = mbti_upper[1:3]
+            else:
+                # 感觉型(S)看第 2 位和第 4 位 (SP / SJ)
+                quadrant = mbti_upper[1] + mbti_upper[3]
+        else:
             quadrant = "NT"  # 兜底
 
-        # 提取动态认知风格
+            # 再次兜底检查，若字符串不合法依然退回 NT
+        if quadrant not in cls.COGNITIVE_STYLE_MAP:
+            quadrant = "NT"
+
+            # 提取动态认知风格
         cognitive_desc = cls.COGNITIVE_STYLE_MAP[quadrant]
 
         # 2. 动态检测“职业与人格”的冲突带来的内耗特征（利用大五人格的宜人性和外倾性）
@@ -40,16 +50,31 @@ class DynamicLoreFactory:
         trait_A = ocean_dna.get("A", 0.5)
         trait_N = ocean_dna.get("N", 0.05)  # 神经质
 
-        conflict_desc = ""
-        # 冲突情况 A：内向的人（低E）被迫做高度依赖社交/沟通的职业
-        if trait_E < 0.3 and any(
-                word in profession.lower() for word in ["manager", "teacher", "service", "sales", "coordinator"]):
-            conflict_desc = " While you perform your duties flawlessly, this heavily communicative role constantly drains your internal battery, causing you to tightly ration your verbal energy."
-
-        # 冲突情况 B：外向的人（高E）被迫做高度隔离/静止的职业
-        elif trait_E > 0.7 and any(
+        conflict_pieces = []
+        # === 维度一：外倾性 (E) 错位冲突 ===
+        # 冲突情况 A1：内向的人（低E）被迫做高度依赖社交/沟通的职业
+        if trait_E < 0.3 and any(word in profession.lower() for word in
+                                 ["manager", "teacher", "service", "sales", "coordinator", "singer"]):
+            conflict_pieces.append("While you perform your duties flawlessly, this heavily communicative role constantly drains your internal battery, causing you to tightly ration your verbal energy.")
+        # 冲突情况 A2：外向的人（高E）被迫做高度隔离/静止的职业
+        if trait_E > 0.7 and any(
                 word in profession.lower() for word in ["engineer", "researcher", "analyst", "coder", "writer"]):
-            conflict_desc = " Although you focus on your technical tasks, you inherently crave real-time human resonance, occasionally infusing casual banter or expressive tone into your formal output."
+            conflict_pieces.append("Although you focus on your technical tasks, you inherently crave real-time human resonance, occasionally infusing casual banter or expressive tone into your formal output.")
+
+        # === 维度二：【已补全】宜人性 (A) 错位冲突 ===
+        # 冲突情况 B1：低宜人（低A，冷酷挑剔）的人被迫从事需要高同理心/服务属性的职业
+        if trait_A < 0.3 and any(word in profession.lower() for word in
+                                 ["manager", "teacher", "service", "sales", "coordinator", "nurse"]):
+            conflict_pieces.append(
+                "Occupying a role that demands high empathy and customer satisfaction creates constant internal friction; you harbor deep, cynical judgments regarding people's incompetence, though you mask it behind a thin veneer of compliance.")
+            # (身处需要高同理心和客户满意度的职位会带来持续的内部摩擦；你对人们的无能抱有深刻而愤世嫉俗的审视，尽管你将其掩饰在微薄的顺从面具之下。)
+        # 冲突情况 B2：高宜人（高A，温柔利他）的人从事了冰冷、纯逻辑或高对抗的职业
+        if trait_A > 0.7 and any(
+                word in profession.lower() for word in ["engineer", "coder", "analyst", "trader", "lawyer"]):
+            conflict_pieces.append(
+                "Working in a clinical or highly competitive domain, you sometimes experience moral friction, inherently wishing to accommodate human vulnerabilities rather than treating everything as cold, unfeeling data points.")
+            # (在冷冰冰或竞争极度激烈的领域工作，你有时会经历道德摩擦，本能地希望容纳人性的脆弱，而不是将一切都视为冰冷无情的数据点。)
+        conflict_desc = " " + " ".join(conflict_pieces) if conflict_pieces else ""
 
         # 3. 提取情绪坚韧度尾缀 (-A vs -T)
         if trait_N < 0.25:
@@ -57,9 +82,6 @@ class DynamicLoreFactory:
         else:
             identity_desc = " Under pressure, you operate on a highly sensitive wire; you are prone to intense internal anxiety and will exhibit sharp defensive or evasive characteristics if challenged."
 
-        # 4. 拼装最终的 ROLE IDENTITY DEFINITION
-        final_lore = (
-            f"A professional {profession.strip()}. {cognitive_desc}"
-            f"{conflict_desc}{identity_desc}"
-        )
-        return final_lore
+            # 4. 拼装最终完整的 ROLE IDENTITY DEFINITION (严格规范句群间空格)
+            final_lore = f"A professional {profession.strip()}. {cognitive_desc}{conflict_desc} {identity_desc}"
+            return final_lore
