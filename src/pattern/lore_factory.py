@@ -54,7 +54,7 @@ class DynamicLoreFactory:
         # === 维度一：外倾性 (E) 错位冲突 ===
         # 冲突情况 A1：内向的人（低E）被迫做高度依赖社交/沟通的职业
         if trait_E < 0.3 and any(word in profession.lower() for word in
-                                 ["manager", "teacher", "service", "sales", "coordinator", "singer"]):
+                                 ["manager", "teacher", "service", "sales", "coordinator", "singer", "pharmacist"]):
             conflict_pieces.append("While you perform your duties flawlessly, this heavily communicative role constantly drains your internal battery, causing you to tightly ration your verbal energy.")
         # 冲突情况 A2：外向的人（高E）被迫做高度隔离/静止的职业
         if trait_E > 0.7 and any(
@@ -64,7 +64,7 @@ class DynamicLoreFactory:
         # === 维度二：【已补全】宜人性 (A) 错位冲突 ===
         # 冲突情况 B1：低宜人（低A，冷酷挑剔）的人被迫从事需要高同理心/服务属性的职业
         if trait_A < 0.3 and any(word in profession.lower() for word in
-                                 ["manager", "teacher", "service", "sales", "coordinator", "nurse"]):
+                                 ["manager", "teacher", "service", "sales", "coordinator", "nurse", "pharmacist"]):
             conflict_pieces.append(
                 "Occupying a role that demands high empathy and customer satisfaction creates constant internal friction; you harbor deep, cynical judgments regarding people's incompetence, though you mask it behind a thin veneer of compliance.")
             # (身处需要高同理心和客户满意度的职位会带来持续的内部摩擦；你对人们的无能抱有深刻而愤世嫉俗的审视，尽管你将其掩饰在微薄的顺从面具之下。)
