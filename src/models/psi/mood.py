@@ -58,7 +58,7 @@ class MoodLayer:
                 self.valence = max(col_cfg.valence_floor_unprotected, self.valence - col_cfg.valence_drain)  # 心情疯狂下坠
         else:
             # 退出困境后，放弃意愿缓慢平复
-            self.giving_up_rate = max(0.0, self.giving_up_rate - res_cfg.giving_up_recovery)
+            self.giving_up_rate = max(0.0, self.giving_up_rate - rec_cfg.giving_up_recovery)
 
     def apply_physiological_impact(self, delta_v: float, delta_a: float):
         """外部直接打击：由于信念护盾的存在，可以拦截伤害"""
