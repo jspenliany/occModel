@@ -1,75 +1,11 @@
-ser: 马上要吃午饭了啊，要不要去外边吃啊，老是吃食堂都厌烦了
-2026-09-20 04:57:37 - INFO - occ value delta estimate (INTJ-A): # ROLE
+User: 你是不是正在吃早饭，准备去上班了
+2026-09-20 05:37:51 - INFO - occ value delta estimate (INTJ-A): # ROLE
 你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
 
 # TARGET CHARACTER COGNITIVE ANCHOR (角色认知锚点)
 - 名字: software engineer
 - 基础人格 (MBTI): INTJ-A
-- 核心背景 (Background Core Lore): A professional software engineer. You treat your tasks as a highly complex logical system. You prioritize absolute intellectual competence, data-driven optimization, and structural efficiency over emotional considerations. Under extreme operational pressure, you remain a rock-solid, stoic professional, absorbing environmental stressors with absolute emotional detachment. 
-# 💡 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
-
-# OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
-请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
-
-1. `desirability` (当前事件对角色自身目标的利弊): 
-   - 范围 [-1.0 到 1.0]。符合角色的 Core Lore 或好事发生输出【正数】；阻碍角色效率、引发系统混乱或坏事发生输出【负数】。
-2. `blameworthiness` (他人言行对角色行为标准的符合度):
-   - 范围 [-1.0 到 1.0]。他人的言行值得赞赏、符合专业标准输出【正数】；他人故意刁难、缺乏逻辑、消极怠工、值得谴责输出【负数】。
-3. `self_blameworthiness` (自身言行对自身标准的符合度/自责):
-   - 范围 [-1.0 到 1.0]。通常为 0.0。若角色自身犯错产生羞耻或自责输出【负数】。
-4. `future_desirability` (远期未来前瞻期望值):
-   - 范围 [0.0 到 1.0]。对未来产生希望的潜在强度，只能为【正数】。若无则输出 0.0。
-5. `prospect_status` (预期推进状态字符串):
-   - 必须且只能从以下 4 个固定枚举值中选择一个：
-     - `"expected"`: 事件属于预期会发生的事情。
-     - `"confirmed"`: 之前预期的好事或坏事在当下被完全证实了。
-     - `"disconfirmed"`: 之前预期的好事落空，或预期的坏事警报解除。
-     - `"none"`: 突发性事件，或没有特定的预期推进。
-6. `other_desirability` (该事件对他人而言的利弊):
-   - 范围 [-1.0 到 1.0]。对他人是好事输出【正数】，对他人是坏事输出【负数】。
-7. `other_relationship` (角色与对方的亲疏或敌对关系基准):
-   - 范围 [-1.0 到 1.0]。喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
-8. `appealingness` (用户表现特质与角色喜好的契合度):
-   - 范围 [-1.0 到 1.0]。对方的谈吐或状态符合角色审美喜好输出【正数】；对方的表达方式触发角色极度反感输出【负数】。
-
-# OUTPUT FORMAT (JSON ONLY)
-你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、分析文字或 Markdown 标记。确保所有键名与系统字典完全一致：
-{
-  "desirability": float,
-  "blameworthiness": float,
-  "self_blameworthiness": float,
-  "future_desirability": float,
-  "prospect_status": "none" | "expected" | "confirmed" | "disconfirmed",
-  "other_desirability": float,
-  "other_relationship": float,
-  "appealingness": float
-}
-2026-09-20 04:57:58 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
-2026-09-20 04:57:58 - INFO - Raw response from Gemma: ```json
-{
-  "desirability": -0.1,
-  "blameworthiness": 0.0,
-  "self_blameworthiness": 0.0,
-  "future_desirability": 0.0,
-  "prospect_status": "none",
-  "other_desirability": 0.3,
-  "other_relationship": 0.1,
-  "appealingness": -0.2
-}
-```
-2026-09-20 04:57:58 - INFO - Successfully parsed appraisal JSON: {'desirability': -0.1, 'blameworthiness': 0.0, 'self_blameworthiness': 0.0, 'future_desirability': 0.0, 'prospect_status': 'none', 'other_desirability': 0.3, 'other_relationship': 0.1, 'appealingness': -0.2}
-2026-09-20 04:57:58 - INFO - INTJ-A occ change................
-{'profession': 'software engineer', 'mbti': 'INTJ-A', 'ocean_dna': {'O': 0.821, 'C': 0.886, 'E': 0.206, 'A': 0.209, 'N': 0.22}, 'mood_valence': 0.11, 'mood_arousal': -0.12, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
-{'profession': 'software engineer', 'mbti': 'INTJ-A', 'ocean_dna': {'O': 0.821, 'C': 0.886, 'E': 0.206, 'A': 0.209, 'N': 0.22}, 'mood_valence': 0.1, 'mood_arousal': -0.12, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
-
-
-2026-09-20 04:57:58 - INFO - occ value delta estimate (ESFP-T): # ROLE
-你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
-
-# TARGET CHARACTER COGNITIVE ANCHOR (角色认知锚点)
-- 名字: brilliant singer
-- 基础人格 (MBTI): ESFP-T
-- 核心背景 (Background Core Lore): A professional brilliant singer. You treat your tasks as a highly complex logical system. You prioritize absolute intellectual competence, data-driven optimization, and structural efficiency over emotional considerations. Under pressure, you operate on a highly sensitive wire; you are prone to intense internal anxiety and will exhibit sharp defensive or evasive characteristics if challenged.
+- 核心背景 (Background Core Lore): None
 # 💡 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
 
 # OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
@@ -108,20 +44,96 @@ ser: 马上要吃午饭了啊，要不要去外边吃啊，老是吃食堂都厌
   "other_relationship": float,
   "appealingness": float
 }
-2026-09-20 04:58:25 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
-2026-09-20 04:58:25 - INFO - Raw response from Gemma: ```json
+2026-09-20 05:38:12 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:38:12 - INFO - Raw response from Gemma: ```json
 {
   "desirability": -0.2,
-  "blameworthiness": 0.0,
+  "blameworthiness": -0.1,
   "self_blameworthiness": 0.0,
   "future_desirability": 0.0,
   "prospect_status": "none",
-  "other_desirability": 0.5,
-  "other_relationship": 0.1,
-  "appealingness": -0.3
+  "other_desirability": 0.3,
+  "other_relationship": -0.1,
+  "appealingness": -0.4
 }
 ```
-2026-09-20 04:58:25 - INFO - Successfully parsed appraisal JSON: {'desirability': -0.2, 'blameworthiness': 0.0, 'self_blameworthiness': 0.0, 'future_desirability': 0.0, 'prospect_status': 'none', 'other_desirability': 0.5, 'other_relationship': 0.1, 'appealingness': -0.3}
-2026-09-20 04:58:25 - INFO - ESFP-T occ change................
-{'profession': 'brilliant singer', 'mbti': 'ESFP-T', 'ocean_dna': {'O': 0.248, 'C': 0.155, 'E': 0.859, 'A': 0.857, 'N': 0.908}, 'mood_valence': 0.44, 'mood_arousal': 0.29, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
-{'profession': 'brilliant singer', 'mbti': 'ESFP-T', 'ocean_dna': {'O': 0.248, 'C': 0.155, 'E': 0.859, 'A': 0.857, 'N': 0.908}, 'mood_valence': 0.42, 'mood_arousal': 0.3, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {'Happy_For': 0.18, 'Disliking': 0.02}}
+2026-09-20 05:38:12 - INFO - Successfully parsed appraisal JSON: {'desirability': -0.2, 'blameworthiness': -0.1, 'self_blameworthiness': 0.0, 'future_desirability': 0.0, 'prospect_status': 'none', 'other_desirability': 0.3, 'other_relationship': -0.1, 'appealingness': -0.4}
+2026-09-20 05:38:12 - INFO - INTJ-A occ change................
+{'profession': 'software engineer', 'mbti': 'INTJ-A', 'ocean_dna': {'O': 0.714, 'C': 0.826, 'E': 0.241, 'A': 0.247, 'N': 0.117}, 'mood_valence': 0.17, 'mood_arousal': -0.11, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
+{'profession': 'software engineer', 'mbti': 'INTJ-A', 'ocean_dna': {'O': 0.714, 'C': 0.826, 'E': 0.241, 'A': 0.247, 'N': 0.117}, 'mood_valence': 0.16, 'mood_arousal': -0.1, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
+2026-09-20 05:38:12 - INFO - occ value delta estimate (ESFP-T): # ROLE
+你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
+
+# TARGET CHARACTER COGNITIVE ANCHOR (角色认知锚点)
+- 名字: brilliant singer
+- 基础人格 (MBTI): ESFP-T
+- 核心背景 (Background Core Lore): A professional brilliant singer. You thrive on real-time execution and direct, pragmatic troubleshooting. You prefer adapting immediately to tactical realities on the ground over micro-managed theoretical long-term plans.  Under pressure, you operate on a highly sensitive wire; you are prone to intense internal anxiety and will exhibit sharp defensive or evasive characteristics if challenged.
+# 💡 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
+
+# OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
+请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
+
+1. `desirability` (当前事件对角色自身目标的利弊):
+   - 范围 [-1.0 到 1.0]。符合角色的 Core Lore 或好事发生输出【正数】；阻碍角色效率、引发系统混乱或坏事发生输出【负数】。
+2. `blameworthiness` (他人言行对角色行为标准的符合度):
+   - 范围 [-1.0 到 1.0]。他人的言行值得赞赏、符合专业标准输出【正数】；他人故意刁难、缺乏逻辑、消极怠工、值得谴责输出【负数】。
+3. `self_blameworthiness` (自身言行对自身标准的符合度/自责):
+   - 范围 [-1.0 到 1.0]。通常为 0.0。若角色自身犯错产生羞耻或自责输出【负数】。
+4. `future_desirability` (远期未来前瞻期望值):
+   - 范围 [0.0 到 1.0]。对未来产生希望的潜在强度，只能为【正数】。若无则输出 0.0。
+5. `prospect_status` (预期推进状态字符串):
+   - 必须且只能从以下 4 个固定枚举值中选择一个：
+     - `"expected"`: 事件属于预期会发生的事情。
+     - `"confirmed"`: 之前预期的好事或坏事在当下被完全证实了。
+     - `"disconfirmed"`: 之前预期的好事落空，或预期的坏事警报解除。
+     - `"none"`: 突发性事件，或没有特定的预期推进。
+6. `other_desirability` (该事件对他人而言的利弊):
+   - 范围 [-1.0 到 1.0]。对他人是好事输出【正数】，对他人是坏事输出【负数】。
+7. `other_relationship` (角色与对方的亲疏或敌对关系基准):
+   - 范围 [-1.0 到 1.0]。喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
+8. `appealingness` (用户表现特质与角色喜好的契合度):
+   - 范围 [-1.0 到 1.0]。对方的谈吐或状态符合角色审美喜好输出【正数】；对方的表达方式触发角色极度反感输出【负数】。
+
+# OUTPUT FORMAT (JSON ONLY)
+你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、分析文字或 Markdown 标记。确保所有键名与系统字典完全一致：
+{
+  "desirability": float,
+  "blameworthiness": float,
+  "self_blameworthiness": float,
+  "future_desirability": float,
+  "prospect_status": "none" | "expected" | "confirmed" | "disconfirmed",
+  "other_desirability": float,
+  "other_relationship": float,
+  "appealingness": float
+}
+2026-09-20 05:38:34 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:38:34 - INFO - Raw response from Gemma: ```json
+{
+  "desirability": 0.2,
+  "blameworthiness": 0.0,
+  "self_blameworthiness": 0.0,
+  "future_desirability": 0.2,
+  "prospect_status": "none",
+  "other_desirability": 0.1,
+  "other_relationship": 0.5,
+  "appealingness": 0.4
+}
+```
+2026-09-20 05:38:34 - INFO - Successfully parsed appraisal JSON: {'desirability': 0.2, 'blameworthiness': 0.0, 'self_blameworthiness': 0.0, 'future_desirability': 0.2, 'prospect_status': 'none', 'other_desirability': 0.1, 'other_relationship': 0.5, 'appealingness': 0.4}
+2026-09-20 05:38:34 - INFO - ESFP-T occ change................
+{'profession': 'brilliant singer', 'mbti': 'ESFP-T', 'ocean_dna': {'O': 0.195, 'C': 0.261, 'E': 0.779, 'A': 0.857, 'N': 0.928}, 'mood_valence': 0.39, 'mood_arousal': 0.21, 'competence': 0.7, 'giving_up_rate': 0.0, 'faith_shield': 0.0, 'active_emotions': {}}
+{'profession': 'brilliant singer', 'mbti': 'ESFP-T', 'ocean_dna': {'O': 0.195, 'C': 0.261, 'E': 0.779, 'A': 0.857, 'N': 0.928}, 'mood_valence': 0.81, 'mood_arousal': 0.42, 'competence': 0.73, 'giving_up_rate': 0.0, 'faith_shield': 0.16, 'active_emotions': {'Joy': 0.75, 'Hope': 0.11, 'Happy_For': 0.01}}
+2026-09-20 05:38:42 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:38:55 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:39:09 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:39:26 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 05:39:26 - INFO -
+----------------------------------------------------------------------------------
+
+2026-09-20 05:39:26 - INFO - debug user input: 你是不是正在吃早饭，准备去上班了
+2026-09-20 05:39:26 - INFO - debug benchmark raw 没这口饭吃，我 24 小时在岗，随时待命！
+2026-09-20 05:39:26 - INFO - debug benchmark no-mbti  没那闲情。至于上班……我这种身份，哪有什么所谓的“上班”。
+2026-09-20 05:39:26 - INFO - debug cat_intja 没，我不搞那一套。我已经进入状态了。
+2026-09-20 05:39:26 - INFO - debug cat_esfpt 怎么可能！我这作息你懂的，现在才刚睁眼。而且我哪有什么所谓的“上班”啊，直接去录音室或者舞台就算开工了。不过被你这么一问，突然觉得有点饿了，我现在就去搞点吃的！
+2026-09-20 05:39:26 - INFO -
+----------------------------------------------------------------------------------
