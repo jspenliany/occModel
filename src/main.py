@@ -211,7 +211,18 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
 
     # send request to llm
     try:
-        user_message = "怎么做明年的计划啊？"
+        user_message = "昨天一个前来咨询的人，故意刁难我。我只能耐着性子跟他解释了一遍又一遍相关制度，他才离开的。你说我的做法对不对"
+        benchmark_response = llm_client.chat.completions.create(
+            model="google/gemma-4-31b-it",
+            messages=[
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=user_message,
+                ),
+            ],
+            temperature=0.4,
+            max_tokens=1024,
+        )
         cat_intja_response = llm_client.chat.completions.create(
             model="google/gemma-4-31b-it",
             messages=[
@@ -220,8 +231,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                     content=(
                         f"{cat_intja_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
                         "- Keep your response extremely brief, casual, and punchy.\n"
-                        "- Do NOT exceed 200 words under any circumstances.\n"
-                        "- Express your high-energy personality and chaotic emotion within this short limit."
+                        "- Do NOT exceed 200 words under any circumstances"
                     ),
                 ),
                 ChatCompletionUserMessageParam(
@@ -230,7 +240,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                 ),
             ],
             temperature=0.4,
-            max_tokens=300,
+            max_tokens=1024,
         )
         cat_esfpt_response = llm_client.chat.completions.create(
             model="google/gemma-4-31b-it",
@@ -240,8 +250,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                     content=(
                         f"{cat_esfpt_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
                         "- Keep your response extremely brief, casual, and punchy.\n"
-                        "- Do NOT exceed 200 words under any circumstances.\n"
-                        "- Express your high-energy personality and chaotic emotion within this short limit."
+                        "- Do NOT exceed 200 words under any circumstances"
                     ),
                 ),
                 ChatCompletionUserMessageParam(
@@ -250,8 +259,9 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                 ),
             ],
             temperature=0.4,
-            max_tokens=300,
+            max_tokens=1024,
         )
+        logger.info(f"debug benchmark {benchmark_response.choices[0].message.content}")
         logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
         logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
     except Exception as e:
