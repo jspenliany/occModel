@@ -4,6 +4,7 @@ from models.psi.bridge import PSI3DGlassBridge
 from prompts.prompt_renderer import LLMPromptRenderer
 from src.pattern.lore_factory import DynamicLoreFactory
 from openai import OpenAI
+import re, json
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
@@ -172,6 +173,19 @@ def run_integrated_lifecycle_test():
     # furious_prompt = renderer.render_system_prompt(furious_state)
     # logger.info(furious_prompt)
 
+def extract_and_parse_json(text: str) -> dict:
+    # 尝试匹配 ```json ... ``` 或 ``` ... ``` 内部的内容
+    json_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if json_block_match:
+        text_to_parse = json_block_match.group(1)
+    else:
+        # 如果没有 Markdown 标记，尝试直接匹配最外层的第一个 { 到最后一个 }
+        just_json_match = re.search(r'(\{.*\})', text, re.DOTALL)
+        text_to_parse = just_json_match.group(1) if just_json_match else text
+
+    # 将字符串转为 Python 字典
+    return json.loads(text_to_parse)
+
 def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     llm_client = OpenAI(
         base_url="http://0.0.0.0:8000/v1",
@@ -247,6 +261,46 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                 temperature=0.4,
                 max_tokens=1024,
             )
+            raw_text = delta_intja_response.choices[0].message.content.strip()
+            logger.info(f"Raw response from Gemma: {raw_text}")
+            intja_appraisal_data = extract_and_parse_json(raw_text)
+            logger.info(f"Successfully parsed appraisal JSON: {intja_appraisal_data}")
+
+            cat_intja.receive_user_stimulus(intja_appraisal_data)
+            cat_intja.update_system_clock()
+            new_render_cat_intja = cat_intja.get_current_avatar_state()
+            logger.info(f"{cat_intja.p_layer.mbti} occ change................\n{render_cat_intja}\n{new_render_cat_intja}")
+            cat_intja_content = prompt_cat_intja.render_system_prompt(new_render_cat_intja)
+
+            cat_esfpt_delta = prompt_cat_esfpt.render_reflect_prompt(render_cat_esfpt)
+            logger.info(f"occ value delta estimate ({cat_esfpt.p_layer.mbti}): {cat_esfpt_delta}")
+            delta_esfpt_response = llm_client.chat.completions.create(
+                model="google/gemma-4-31b-it",
+                messages=[
+                    ChatCompletionSystemMessageParam(
+                        role="system",
+                        content=cat_esfpt_delta,
+                    ),
+                    ChatCompletionUserMessageParam(
+                        role="user",
+                        content=(
+                            f"<context>{message_hist}</context>\n<user_input>{user_message}</user_input>"
+                        ),
+                    ),
+                ],
+                temperature=0.4,
+                max_tokens=1024,
+            )
+            raw_text = delta_esfpt_response.choices[0].message.content.strip()
+            logger.info(f"Raw response from Gemma: {raw_text}")
+            esfpt_appraisal_data = extract_and_parse_json(raw_text)
+            logger.info(f"Successfully parsed appraisal JSON: {esfpt_appraisal_data}")
+
+            cat_esfpt.receive_user_stimulus(esfpt_appraisal_data)
+            cat_esfpt.update_system_clock()
+            new_render_cat_esfpt = cat_esfpt.get_current_avatar_state()
+            logger.info(f"{cat_esfpt.p_layer.mbti} occ change................\n{render_cat_esfpt}\n{new_render_cat_esfpt}")
+            cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(new_render_cat_esfpt)
 
             #personal answer
             benchmark_raw_response = llm_client.chat.completions.create(
@@ -329,6 +383,8 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             logger.info(f"debug benchmark no-mbti  {benchmark_no_mbti_response.choices[0].message.content}")
             logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
             logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
+
+            message_hist += user_message
         except Exception as e:
             logger.info(e)
 
