@@ -210,7 +210,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     render_cat_esfpt = cat_esfpt.get_current_avatar_state()
     prompt_cat_intja = LLMPromptRenderer(
         character_name = "cat_intja",
-        profession = "software engineer",
+        profession = "pharmacist",
         lore_factory = lore_factory,
     )
     cat_intja_content = prompt_cat_intja.render_system_prompt(render_cat_intja)
@@ -379,10 +379,13 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
                 temperature=0.4,
                 max_tokens=1024,
             )
+            logger.info("\n----------------------------------------------------------------------------------\n")
+            logger.info(f"debug user input: {user_input}")
             logger.info(f"debug benchmark raw {benchmark_raw_response.choices[0].message.content}")
             logger.info(f"debug benchmark no-mbti  {benchmark_no_mbti_response.choices[0].message.content}")
             logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
             logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
+            logger.info("\n----------------------------------------------------------------------------------\n")
 
             message_hist += user_message
         except Exception as e:
