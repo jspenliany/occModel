@@ -1,4 +1,15 @@
-2026-09-20 00:36:21 - INFO - debug benchmark raw 走起！人生苦短，不能总吃食堂。赶紧冲！
-2026-09-20 00:36:21 - INFO - debug benchmark no-mbti  走起！人生苦短，不能总吃食堂。赶紧冲！
-2026-09-20 00:36:21 - INFO - debug cat_intja 走吧。食堂确实没营养，虽然浪费时间，但换个环境也行。快决定去哪，别磨蹭。
-2026-09-20 00:36:21 - INFO - debug cat_esfpt 走啊！我也快被食堂那些菜搞疯了。赶紧定个地方，别磨叽，饿死我了。
+2026-09-20 04:48:14 - INFO - HTTP Request: POST http://0.0.0.0:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-09-20 04:48:14 - INFO - Raw response from Gemma: ```json
+{
+  "desirability": -0.4,
+  "blameworthiness": -0.7,
+  "self_blameworthiness": 0.0,
+  "future_desirability": 0.0,
+  "prospect_status": "none",
+  "other_desirability": -0.5,
+  "other_relationship": 0.0,
+  "appealingness": -0.3
+}
+```
+2026-09-20 04:48:14 - INFO - Successfully parsed appraisal JSON: {'desirability': -0.4, 'blameworthiness': -0.7, 'self_blameworthiness': 0.0, 'future_desirability': 0.0, 'prospect_status': 'none', 'other_desirability': -0.5, 'other_relationship': 0.0, 'appealingness': -0.3}
+2026-09-20 04:48:14 - INFO - 'HardshipResilienceConfig' object has no attribute 'giving_up_recovery'
