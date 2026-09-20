@@ -159,7 +159,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
 
-    def render_reflect_prompt(self, context: str, message_content: str, avatar_state: dict) -> dict:
+    def render_reflect_prompt(self, avatar_state: dict) -> dict:
         """
         external input affect occ model:
         reflect message content into occ values.
@@ -205,10 +205,6 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
    - 范围 [-1.0 到 1.0]。喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
 8. `appealingness` (用户表现特质与角色喜好的契合度):
    - 范围 [-1.0 到 1.0]。对方的谈吐或状态符合角色审美喜好输出【正数】；对方的表达方式触发角色极度反感输出【负数】。
-
-# INPUT DATA
-- 历史上下文简述: {context}
-- 用户的最新输入: {message_content}
 
 # OUTPUT FORMAT (JSON ONLY)
 你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、分析文字或 Markdown 标记。确保所有键名与系统字典完全一致：

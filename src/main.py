@@ -188,8 +188,8 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     mbti_red_entja = "ENTJ-A"  #指挥官
     mbti_red_isfjt = "ISFJ-T"  #隐忍的守护者
     logger.info("====================cat pair====================")
-    cat_intja = PSI3DGlassBridge(mbti_cat_intja)
-    cat_esfpt = PSI3DGlassBridge(mbti_cat_esfpt)
+    cat_intja = PSI3DGlassBridge(mbti_cat_intja, "software engineer")
+    cat_esfpt = PSI3DGlassBridge(mbti_cat_esfpt,"brilliant singer")
     logger.info(f"debug basic information {cat_intja.to_dict()}")
     logger.info(f"debug basic information {cat_esfpt.to_dict()}")
     render_cat_intja = cat_intja.get_current_avatar_state()
@@ -217,13 +217,38 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     )
     benchmark_no_mbti_content = prompt_no_mbti.render_benchmark_prompt(1)
 
-    message_hist = ""
+    message_hist = "昨天一个前来咨询的人，故意刁难我。我只能耐着性子跟他解释了一遍又一遍相关制度，他才离开的。你说我的做法对不对? 马上要吃午饭了啊，要不要去外边吃啊，老是吃食堂都厌烦了 我给你说哈，咱们科室那个孕妇刚刚生了，说是足足有8斤重呢"
 
     # send request to llm
     while True:
+        user_input = input("\nUser: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            break
         try:
-            user_message = "昨天一个前来咨询的人，故意刁难我。我只能耐着性子跟他解释了一遍又一遍相关制度，他才离开的。你说我的做法对不对"
+            user_message = user_input
+            #update the occ model parameters
+            render_cat_intja = cat_intja.get_current_avatar_state()
+            cat_intja_delta = prompt_cat_intja.render_reflect_prompt(render_cat_intja)
+            logger.info(f"occ value delta estimate ({cat_intja.p_layer.mbti}): {cat_intja_delta}")
+            delta_intja_response = llm_client.chat.completions.create(
+                model="google/gemma-4-31b-it",
+                messages=[
+                    ChatCompletionSystemMessageParam(
+                        role="system",
+                        content=cat_intja_delta,
+                    ),
+                    ChatCompletionUserMessageParam(
+                        role="user",
+                        content=(
+                            f"<context>{message_hist}</context>\n<user_input>{user_message}</user_input>"
+                        ),
+                    ),
+                ],
+                temperature=0.4,
+                max_tokens=1024,
+            )
 
+            #personal answer
             benchmark_raw_response = llm_client.chat.completions.create(
                 model="google/gemma-4-31b-it",
                 messages=[
@@ -308,13 +333,13 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             logger.info(e)
 
     logger.info("===================dog pair=====================")
-    dog_istja = PSI3DGlassBridge(mbti_dog_istja)
-    dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt)
+    dog_istja = PSI3DGlassBridge(mbti_dog_istja,"teacher")
+    dog_enfpt = PSI3DGlassBridge(mbti_dog_enfpt, "white worker")
     logger.info(f"debug basic information {dog_istja.to_dict()}")
     logger.info(f"debug basic information {dog_enfpt.to_dict()}")
     logger.info("===================red pair=====================")
-    red_entja = PSI3DGlassBridge(mbti_red_entja)
-    red_isfjt = PSI3DGlassBridge(mbti_red_isfjt)
+    red_entja = PSI3DGlassBridge(mbti_red_entja, "driver")
+    red_isfjt = PSI3DGlassBridge(mbti_red_isfjt, "commander")
     logger.info(f"debug basic information {red_entja.to_dict()}")
     logger.info(f"debug basic information {red_isfjt.to_dict()}")
 
