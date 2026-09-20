@@ -29,7 +29,7 @@ class LoggerSingleton:
 
         # 根logger
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
+        root_logger.setLevel(logging.INFO)
         root_logger.handlers.clear()  # 清空默认handler
 
         # 1. 控制台输出

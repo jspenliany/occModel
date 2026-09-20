@@ -6,7 +6,7 @@ from src.logger_singleton import logger
 
 
 class PSI3DGlassBridge:
-    def __init__(self, mbti_type: str):
+    def __init__(self, mbti_type: str, profession: str):
         self.p_layer = PersonalityLayer(mbti_type)
         raw_v = (self.p_layer.get_trait("E") * 0.5 + self.p_layer.get_trait("A") * 0.3 - self.p_layer.get_trait("N") * 0.35) * 1.2
         raw_a = self.p_layer.get_trait("E") * 0.8 + self.p_layer.get_trait("O") * 0.2 - 0.45
@@ -21,6 +21,8 @@ class PSI3DGlassBridge:
 
         # 标志当前环境是否属于极端困境
         self.in_hardship_flag = False
+
+        self.profession = profession
 
     def set_environmental_hardship(self, flag: bool):
         """控制环境是否属于困境"""
@@ -75,6 +77,7 @@ class PSI3DGlassBridge:
 
     def get_current_avatar_state(self) -> dict:
         return {
+            "profession": self.profession,
             "mbti": self.p_layer.mbti,
             "ocean_dna": {k: round(v, 3) for k, v in self.p_layer.ocean.items()},
             "mood_valence": round(self.m_layer.valence, 2),
@@ -87,6 +90,7 @@ class PSI3DGlassBridge:
     # 追加入 PSI3DGlassBridge中，实现全状态序列化
     def to_dict(self) -> dict:
         return {
+            "profession": self.profession,
             "personality": self.p_layer.to_dict(),
             "mood": self.m_layer.to_dict(),
             "emotion": self.e_layer.to_dict(),
@@ -97,6 +101,7 @@ class PSI3DGlassBridge:
     @classmethod
     def load_bridge(cls, state_dict: dict) -> 'PSI3DGlassBridge':
         bridge = cls.__new__(cls)
+        bridge.profession = state_dict["profession"]
         bridge.p_layer = PersonalityLayer.from_dict(state_dict["personality"])
         bridge.m_layer = MoodLayer.from_dict(state_dict["mood"])
         bridge.e_layer = OCCEmotionLayer.from_dict(state_dict["emotion"]) # 内部自动处理物理时间衰减！

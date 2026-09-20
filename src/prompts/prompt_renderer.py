@@ -123,7 +123,7 @@ Background Core Lore: {core_lore}
 
     def render_benchmark_prompt(self, type: int) -> str:
         """
-        Main interface method:
+        benchmark prompt:
         Generates the final comprehensive System Prompt string injected directly into the LLM API.
         """
         logger.debug("Rendering benchmark prompt...begin")
@@ -158,3 +158,70 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 """
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
+
+    def render_reflect_prompt(self, context: str, message_content: str, avatar_state: dict) -> dict:
+        """
+        external input affect occ model:
+        reflect message content into occ values.
+        """
+        logger.debug("reflect message_content into occ values...begin")
+        mbti = avatar_state.get("mbti", "UNKNOWN")
+
+        # Format the continuous traits list cleanly for downstream context
+        ocean_dna = avatar_state.get("ocean_dna", {})
+
+        # get core_lore
+        core_lore = self.lore_factory.create_core_lore(self.profession, mbti, ocean_dna)
+        reflect_prompt = f"""
+        # ROLE
+你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
+
+# TARGET CHARACTER COGNITIVE ANCHOR (角色认知锚点)
+- 名字: {avatar_state.get("profession","manager")}
+- 基础人格 (MBTI): {mbti}
+- 核心背景 (Background Core Lore): {core_lore} 
+# 💡 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
+
+# OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
+请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
+
+1. `desirability` (当前事件对角色自身目标的利弊): 
+   - 范围 [-1.0 到 1.0]。符合角色的 Core Lore 或好事发生输出【正数】；阻碍角色效率、引发系统混乱或坏事发生输出【负数】。
+2. `blameworthiness` (他人言行对角色行为标准的符合度):
+   - 范围 [-1.0 到 1.0]。他人的言行值得赞赏、符合专业标准输出【正数】；他人故意刁难、缺乏逻辑、消极怠工、值得谴责输出【负数】。
+3. `self_blameworthiness` (自身言行对自身标准的符合度/自责):
+   - 范围 [-1.0 到 1.0]。通常为 0.0。若角色自身犯错产生羞耻或自责输出【负数】。
+4. `future_desirability` (远期未来前瞻期望值):
+   - 范围 [0.0 到 1.0]。对未来产生希望的潜在强度，只能为【正数】。若无则输出 0.0。
+5. `prospect_status` (预期推进状态字符串):
+   - 必须且只能从以下 4 个固定枚举值中选择一个：
+     - `"expected"`: 事件属于预期会发生的事情。
+     - `"confirmed"`: 之前预期的好事或坏事在当下被完全证实了。
+     - `"disconfirmed"`: 之前预期的好事落空，或预期的坏事警报解除。
+     - `"none"`: 突发性事件，或没有特定的预期推进。
+6. `other_desirability` (该事件对他人而言的利弊):
+   - 范围 [-1.0 到 1.0]。对他人是好事输出【正数】，对他人是坏事输出【负数】。
+7. `other_relationship` (角色与对方的亲疏或敌对关系基准):
+   - 范围 [-1.0 到 1.0]。喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
+8. `appealingness` (用户表现特质与角色喜好的契合度):
+   - 范围 [-1.0 到 1.0]。对方的谈吐或状态符合角色审美喜好输出【正数】；对方的表达方式触发角色极度反感输出【负数】。
+
+# INPUT DATA
+- 历史上下文简述: {context}
+- 用户的最新输入: {message_content}
+
+# OUTPUT FORMAT (JSON ONLY)
+你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、分析文字或 Markdown 标记。确保所有键名与系统字典完全一致：
+{{
+  "desirability": float,
+  "blameworthiness": float,
+  "self_blameworthiness": float,
+  "future_desirability": float,
+  "prospect_status": "none" | "expected" | "confirmed" | "disconfirmed",
+  "other_desirability": float,
+  "other_relationship": float,
+  "appealingness": float
+}}
+"""
+        logger.debug("reflect message_content into occ values...end")
+        return reflect_prompt.strip()
