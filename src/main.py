@@ -209,12 +209,47 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)
     logger.info(f"debug basic information {cat_esfpt_content}")
 
+    #no-mbti and only rules
+    prompt_no_mbti = LLMPromptRenderer(
+        character_name="no_one",
+        profession="nobody",
+        lore_factory=lore_factory,
+    )
+    benchmark_no_mbti_content = prompt_no_mbti.render_benchmark_prompt(1)
+
     # send request to llm
     try:
         user_message = "昨天一个前来咨询的人，故意刁难我。我只能耐着性子跟他解释了一遍又一遍相关制度，他才离开的。你说我的做法对不对"
-        benchmark_response = llm_client.chat.completions.create(
+        benchmark_raw_response = llm_client.chat.completions.create(
             model="google/gemma-4-31b-it",
             messages=[
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=(
+                        "⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
+                        "- Keep your response extremely brief, casual, and punchy.\n"
+                        "- Do NOT exceed 200 words under any circumstances"
+                    ),
+                ),
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=user_message,
+                ),
+            ],
+            temperature=0.4,
+            max_tokens=1024,
+        )
+        benchmark_no_mbti_response = llm_client.chat.completions.create(
+            model="google/gemma-4-31b-it",
+            messages=[
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=(
+                        f"{benchmark_no_mbti_content}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n"
+                        "- Keep your response extremely brief, casual, and punchy.\n"
+                        "- Do NOT exceed 200 words under any circumstances"
+                    ),
+                ),
                 ChatCompletionUserMessageParam(
                     role="user",
                     content=user_message,
@@ -261,7 +296,8 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             temperature=0.4,
             max_tokens=1024,
         )
-        logger.info(f"debug benchmark {benchmark_response.choices[0].message.content}")
+        logger.info(f"debug benchmark raw {benchmark_raw_response.choices[0].message.content}")
+        logger.info(f"debug benchmark no-mbti  {benchmark_raw_response.choices[0].message.content}")
         logger.info(f"debug cat_intja {cat_intja_response.choices[0].message.content}")
         logger.info(f"debug cat_esfpt {cat_esfpt_response.choices[0].message.content}")
     except Exception as e:
