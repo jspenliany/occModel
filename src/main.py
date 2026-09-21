@@ -419,7 +419,7 @@ def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
         orchestrator.process_pipeline(user_message, message_hist)
 
         # 2. 批量生成所有智能体变化后的对话回复
-        avatar_responses = orchestrator.generate_responses(user_message)
+        avatar_responses = orchestrator.generate_responses(message_hist,user_message)
 
         # 3. 统一结构化打印结果
         logger.info("\n" + "-" * 40 + " OUTPUT " + "-" * 40)

@@ -33,13 +33,13 @@ class AvatarOrchestrator:
             except Exception as e:
                 logger.error(f"Error processing emotional reflection for {key}: {e}")
 
-    def generate_responses(self, user_message: str) -> dict:
+    def generate_responses(self, context: str, user_message: str) -> dict:
         """批量生成所有角色的文本回复"""
         responses = {}
         for key, avatar in self.avatars.items():
             logger.info(f"Processing {key} character_name {avatar.get_charactor_name()} profession {avatar.get_profession()}")
             try:
-                messages = avatar.get_response_payload(user_message)
+                messages = avatar.get_response_payload(context,user_message)
                 response = self.llm_client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,

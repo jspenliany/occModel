@@ -221,3 +221,54 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 """
         logger.debug("reflect message_content into occ values...end")
         return reflect_prompt.strip()
+
+    def render_trait_prompt(self) -> dict:
+        trait_prompt = f"""
+        # ROLE & TASK
+你是一个高精度的“人格特质结构化转换引擎”。
+你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质碎片），在不破坏、不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数。
+
+# NORMALIZATION SCHEMA & RULES (严格执行字段定义)
+输出的 JSON 字典必须且只能包含以下 5 个核心键名，严禁自定义其他任何键名：
+
+1. "domain" (核心领域分类)
+   - 数据类型：String (ASCII 字符串枚举)
+   - 必须且只能从以下 5 个固定领域中选择一个：
+     - "preference": 属于个人的生活喜好、饮食习惯、审美偏好、日常行为方式。
+     - "ideology": 属于个人的世界观、价值观、政治/环保立场、对宏观公共事件的态度、意识形态。
+     - "habit": 长期形成的生理、工作或作息习惯。
+     - "taboo": 心理防线、绝对无法容忍的禁忌、引发极端反感的特定行为或话题。
+     - "physiological_limit" (生理/物理刚性限制)：专门用于承载过敏源（如花生过敏、酒精过敏）、色盲、夜盲、或特定身体客观限制。
+
+2. "topic_tags" (标准主题标签)
+   - 数据类型：Array of Strings
+   - 规则：将散落的表述抽象为 1-3 个全局通用的二级分类英文标签（使用下划线蛇形命名法，例如：["marine_pollution", "diet_habit"]）。
+
+3. "linked_entities" (实体链接库)
+   - 数据类型：Array of Strings
+   - 规则：精确提取原文中涉及的核心名词、国家、具体事物（统一转换为小写英文，例如：["japan", "seafood", "nuclear_wastewater"]）。若无具体实体则返回空数组 []。
+
+4. "emotional_weight" (情感共鸣权重/敏感度)
+   - 数据类型：Float
+   - 范围：[0.0 到 1.0]。
+   - 评判标准：原文表达的情绪越激烈、越绝对（如使用“本命”、“极度反感”、“绝对不”），数值越接近 1.0；表达越平淡、属于可有可无的客观描述，数值越接近 0.1。
+
+5. "action_mode" (行为意向模式)
+   - 数据类型：String
+   - 必须且只能从以下 3 个固定枚举中选择一个：
+     - "approach": 接近型（表达喜欢、渴望、追求、持续维持该特质）。
+     - "avoid": 规避型（表达讨厌、拒绝、防御、远离、抵制该特质）。
+     - "neutral": 中立型（仅仅是客观陈述一个习惯或状态，无明显趋向）。
+
+# OUTPUT FORMAT CONSTRAINT (CRITICAL)
+你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、Markdown 的 ```json 标记包裹或任何分析文字。确保可以直接被 Python 的 `json.loads()` 完美解析。
+最终输出样式：
+{
+  "domain": "...",
+  "topic_tags": ["...", "..."],
+  "linked_entities": ["...", "..."],
+  "emotional_weight": 0.00,
+  "action_mode": "..."
+}
+"""
+        return trait_prompt.strip()

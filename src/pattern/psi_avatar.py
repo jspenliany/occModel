@@ -39,6 +39,18 @@ class PsiAvatar:
             ),
         ]
 
+    def get_trait_payload(self, context: str, user_input: str) -> list:
+        """生成用于让大模型评估虚拟人特质的请求 Payload"""
+        trait_prompt = self.renderer.render_trait_prompt()
+        logger.debug(f"get_reflect_payload  reflect_prompt: {trait_prompt}")
+        return [
+            ChatCompletionSystemMessageParam(role="system", content=trait_prompt),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=f"<context>{context}</context>\n<user_input>{user_input}</user_input>"
+            ),
+        ]
+
     def apply_appraisal_and_tick(self, appraisal_data: dict):
         """内化刺激并推进心理时钟"""
         old_state = self.engine.get_current_avatar_state()
@@ -49,7 +61,7 @@ class PsiAvatar:
         logger.debug(
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
-    def get_response_payload(self, user_input: str) -> list:
+    def get_response_payload(self, context: str, user_input: str) -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         current_state = self.engine.get_current_avatar_state()
         system_prompt = self.renderer.render_system_prompt(current_state)
@@ -61,7 +73,10 @@ class PsiAvatar:
                 role="system",
                 content=f"{system_prompt}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n- Keep your response extremely brief, casual, and punchy.\n- Do NOT exceed 200 words under any circumstances"
             ),
-            ChatCompletionUserMessageParam(role="user", content=user_input),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=f"<context>{context}</context>\n<user_input>{user_input}</user_input>"
+            ),
         ]
 
     def get_charactor_name(self) -> str:
