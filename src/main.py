@@ -4,7 +4,7 @@ from models.psi.bridge import PSI3DGlassBridge
 from prompts.prompt_renderer import LLMPromptRenderer
 from src.pattern.lore_factory import DynamicLoreFactory
 from openai import OpenAI
-import re, json
+from src.utils.util_json import extract_and_parse_json
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
@@ -12,6 +12,8 @@ from openai.types.chat import (
     ChatCompletionMessageParam
 )
 from src.message.message_hist import AvatarChatHistory
+from src.pattern.avatar_orchestrator import AvatarOrchestrator
+from src.pattern.psi_avatar import PsiAvatar
 
 def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
     # 1. Initialize the core PSI 3D-Glass engine with a concrete MBTI archetype
@@ -173,18 +175,7 @@ def run_integrated_lifecycle_test():
     # furious_prompt = renderer.render_system_prompt(furious_state)
     # logger.info(furious_prompt)
 
-def extract_and_parse_json(text: str) -> dict:
-    # 尝试匹配 ```json ... ``` 或 ``` ... ``` 内部的内容
-    json_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if json_block_match:
-        text_to_parse = json_block_match.group(1)
-    else:
-        # 如果没有 Markdown 标记，尝试直接匹配最外层的第一个 { 到最后一个 }
-        just_json_match = re.search(r'(\{.*\})', text, re.DOTALL)
-        text_to_parse = just_json_match.group(1) if just_json_match else text
 
-    # 将字符串转为 Python 字典
-    return json.loads(text_to_parse)
 
 def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     llm_client = OpenAI(
@@ -402,9 +393,47 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     logger.info(f"debug basic information {red_entja.to_dict()}")
     logger.info(f"debug basic information {red_isfjt.to_dict()}")
 
+
+def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
+    llm_client = OpenAI(base_url="http://0.0.0", api_key="no-key-required")
+
+    # 初始化协调器
+    orchestrator = AvatarOrchestrator(llm_client)
+
+    # 注册角色（通过声明式配置，彻底消灭手动、重复创建变量的繁琐过程）
+    orchestrator.register_avatar("cat_intja", PsiAvatar("cat_intja", "INTJ-A", "pharmacist", lore_factory))
+    orchestrator.register_avatar("cat_esfpt", PsiAvatar("cat_esfpt", "ESFP-T", "brilliant singer", lore_factory))
+
+    message_hist = ""
+
+    while True:
+        user_input = input("\nUser: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            break
+
+        user_message = user_input
+
+        # 🚀 优化后的整洁流：
+        # 1. 驱动所有智能体一键感知、评估认知并更新底层的 PSI 引擎与时钟
+        orchestrator.process_pipeline(user_message, message_hist)
+
+        # 2. 批量生成所有智能体变化后的对话回复
+        avatar_responses = orchestrator.generate_responses(user_message)
+
+        # 3. 统一结构化打印结果
+        logger.info("\n" + "-" * 40 + " OUTPUT " + "-" * 40)
+        logger.info(f"User Input: {user_message}")
+        for key, reply in avatar_responses.items():
+            logger.info(f"[{key} Response]: {reply}")
+        logger.info("\n" + "-" * 88)
+
+        message_hist += user_message
+
+
 if __name__ == "__main__":
     lore_factory = DynamicLoreFactory()
     # run_avatar_pipeline(lore_factory)
     # debug_avatar_pipeline()
     # run_integrated_lifecycle_test()
-    benchmark_pair_mbti(lore_factory)
+    # benchmark_pair_mbti(lore_factory)
+    benchmark_pair_mbti_optimized(lore_factory)

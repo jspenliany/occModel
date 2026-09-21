@@ -1,0 +1,59 @@
+from src.models.psi.bridge import PSI3DGlassBridge
+from src.logger_singleton import logger
+from src.prompts.prompt_renderer import LLMPromptRenderer
+from openai.types.chat import (
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam
+)
+
+
+class PsiAvatar:
+    """封装 PSI 引擎与 Prompt 渲染器，对外暴露统一的生命周期接口"""
+
+    def __init__(self, character_name: str, mbti: str, profession: str, lore_factory):
+        self.character_name = character_name
+        self.profession = profession
+
+        # 1. 内部组合 PSI 核心与渲染器
+        self.engine = PSI3DGlassBridge(mbti, profession)
+        self.renderer = LLMPromptRenderer(
+            character_name=character_name,
+            profession=profession,
+            lore_factory=lore_factory,
+        )
+
+    def get_reflect_payload(self, context: str, user_input: str) -> list:
+        """生成用于让大模型评估情感冲击（OCC Delta）的请求 Payload"""
+        current_state = self.engine.get_current_avatar_state()
+        reflect_prompt = self.renderer.render_reflect_prompt(current_state)
+        return [
+            ChatCompletionSystemMessageParam(role="system", content=reflect_prompt),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=f"<context>{context}</context>\n<user_input>{user_input}</user_input>"
+            ),
+        ]
+
+    def apply_appraisal_and_tick(self, appraisal_data: dict):
+        """内化刺激并推进心理时钟"""
+        old_state = self.engine.get_current_avatar_state()
+        self.engine.receive_user_stimulus(appraisal_data)
+        self.engine.update_system_clock()
+        new_state = self.engine.get_current_avatar_state()
+
+        logger.info(
+            f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
+
+    def get_response_payload(self, user_input: str) -> list:
+        """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
+        current_state = self.engine.get_current_avatar_state()
+        system_prompt = self.renderer.render_system_prompt(current_state)
+        return [
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content=f"{system_prompt}\n\n⚠️ CRITICAL OUTPUT CONSTRAINT:\n- Keep your response extremely brief, casual, and punchy.\n- Do NOT exceed 200 words under any circumstances"
+            ),
+            ChatCompletionUserMessageParam(role="user", content=user_input),
+        ]
