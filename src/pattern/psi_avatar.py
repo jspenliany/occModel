@@ -30,6 +30,7 @@ class PsiAvatar:
         """生成用于让大模型评估情感冲击（OCC Delta）的请求 Payload"""
         current_state = self.engine.get_current_avatar_state()
         reflect_prompt = self.renderer.render_reflect_prompt(current_state)
+        logger.debug(f"get_reflect_payload  reflect_prompt: {reflect_prompt}")
         return [
             ChatCompletionSystemMessageParam(role="system", content=reflect_prompt),
             ChatCompletionUserMessageParam(
@@ -45,14 +46,14 @@ class PsiAvatar:
         self.engine.update_system_clock()
         new_state = self.engine.get_current_avatar_state()
 
-        logger.info(
+        logger.debug(
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
     def get_response_payload(self, user_input: str) -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         current_state = self.engine.get_current_avatar_state()
         system_prompt = self.renderer.render_system_prompt(current_state)
-
+        logger.debug(f"get_response_payload system_prompt: {system_prompt}")
         self.message_history.add_user_message(user_input)
 
         return [
@@ -62,3 +63,8 @@ class PsiAvatar:
             ),
             ChatCompletionUserMessageParam(role="user", content=user_input),
         ]
+
+    def get_charactor_name(self) -> str:
+        return self.character_name
+    def get_profession(self) -> str:
+        return self.profession

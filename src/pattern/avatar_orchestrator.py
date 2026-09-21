@@ -15,6 +15,7 @@ class AvatarOrchestrator:
     def process_pipeline(self, user_message: str, message_hist: str) -> dict:
         """核心批处理流：一键让所有注册的智能体感知外部世界并准备好状态"""
         for key, avatar in self.avatars.items():
+            logger.info(f"Processing {key} character_name {avatar.get_charactor_name()} profession {avatar.get_profession()}")
             try:
                 # 1. 情感反射阶段：让 LLM 评估当前事件对该角色的 OCC 冲击
                 messages = avatar.get_reflect_payload(message_hist, user_message)
@@ -36,6 +37,7 @@ class AvatarOrchestrator:
         """批量生成所有角色的文本回复"""
         responses = {}
         for key, avatar in self.avatars.items():
+            logger.info(f"Processing {key} character_name {avatar.get_charactor_name()} profession {avatar.get_profession()}")
             try:
                 messages = avatar.get_response_payload(user_message)
                 response = self.llm_client.chat.completions.create(
