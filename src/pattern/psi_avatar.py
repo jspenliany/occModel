@@ -7,6 +7,7 @@ from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam
 )
+from src.message.message_hist import AvatarChatHistory
 
 
 class PsiAvatar:
@@ -23,6 +24,7 @@ class PsiAvatar:
             profession=profession,
             lore_factory=lore_factory,
         )
+        self.message_history = AvatarChatHistory()
 
     def get_reflect_payload(self, context: str, user_input: str) -> list:
         """生成用于让大模型评估情感冲击（OCC Delta）的请求 Payload"""
@@ -50,6 +52,9 @@ class PsiAvatar:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         current_state = self.engine.get_current_avatar_state()
         system_prompt = self.renderer.render_system_prompt(current_state)
+
+        self.message_history.add_user_message(user_input)
+
         return [
             ChatCompletionSystemMessageParam(
                 role="system",

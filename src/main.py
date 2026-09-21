@@ -395,7 +395,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
 
 
 def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
-    llm_client = OpenAI(base_url="http://0.0.0", api_key="no-key-required")
+    llm_client = OpenAI(base_url="http://0.0.0.0:8000/v1", api_key="no-key-required")
 
     # 初始化协调器
     orchestrator = AvatarOrchestrator(llm_client)
@@ -403,6 +403,7 @@ def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
     # 注册角色（通过声明式配置，彻底消灭手动、重复创建变量的繁琐过程）
     orchestrator.register_avatar("cat_intja", PsiAvatar("cat_intja", "INTJ-A", "pharmacist", lore_factory))
     orchestrator.register_avatar("cat_esfpt", PsiAvatar("cat_esfpt", "ESFP-T", "brilliant singer", lore_factory))
+    orchestrator.register_avatar("cat_intpt", PsiAvatar("cat_intpt", "INTP-T", "software engineer", lore_factory))
 
     message_hist = ""
 
