@@ -1,5 +1,6 @@
 from src.models.psi.bridge import PSI3DGlassBridge
 from src.logger_singleton import logger
+from src.models.psi.trait import TraitNormalizer
 from src.prompts.prompt_renderer import LLMPromptRenderer
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
@@ -8,12 +9,13 @@ from openai.types.chat import (
     ChatCompletionMessageParam
 )
 from src.message.message_hist import AvatarChatHistory
+import json
 
 
 class PsiAvatar:
     """封装 PSI 引擎与 Prompt 渲染器，对外暴露统一的生命周期接口"""
 
-    def __init__(self, character_name: str, mbti: str, profession: str, lore_factory):
+    def __init__(self, character_name: str, mbti: str, profession: str, lore_factory, trait_factory):
         self.character_name = character_name
         self.profession = profession
 
@@ -24,6 +26,8 @@ class PsiAvatar:
             profession=profession,
             lore_factory=lore_factory,
         )
+        self.trait_factory = trait_factory
+        self.trait_content = {}
         self.message_history = AvatarChatHistory()
 
     def get_reflect_payload(self, context: str, user_input: str) -> list:
@@ -61,7 +65,7 @@ class PsiAvatar:
         logger.debug(
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
-    def get_response_payload(self, context: str, user_input: str) -> list:
+    def get_common_chat_payload(self, context: str, user_input: str) -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         current_state = self.engine.get_current_avatar_state()
         system_prompt = self.renderer.render_system_prompt(current_state)
@@ -83,3 +87,13 @@ class PsiAvatar:
         return self.character_name
     def get_profession(self) -> str:
         return self.profession
+
+    def append_new_trait(self, trait_text: str) -> str:
+        message_list = self.get_trait_payload("", trait_text)
+        if self.trait_factory is None:
+            logger.debug(f"append_new_trait message: {trait_text}")
+            return trait_text
+
+        self.trait_content = self.trait_factory.normalize_new_chunk(message_list)
+        logger.info(f"{self.character_name} {self.profession} has trait info : {self.trait_content}")
+        return "success"

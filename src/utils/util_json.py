@@ -1,4 +1,6 @@
 import re, json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 def extract_and_parse_json(text: str) -> dict:
     # 尝试匹配 ```json ... ``` 或 ``` ... ``` 内部的内容
@@ -12,3 +14,11 @@ def extract_and_parse_json(text: str) -> dict:
 
     # 将字符串转为 Python 字典
     return json.loads(text_to_parse)
+
+def get_now_time():
+    tz = ZoneInfo("Asia/Shanghai")
+    now = datetime.now(tz)
+
+    # 2. 精确到秒（去掉微秒）
+    now_sec = now.replace(microsecond=0)
+    return now_sec

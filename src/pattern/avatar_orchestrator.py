@@ -1,3 +1,6 @@
+from pyexpat.errors import messages
+
+from src.models.psi.trait import TraitNormalizer
 from src.pattern.psi_avatar import PsiAvatar
 from src.logger_singleton import logger
 from src.utils.util_json import extract_and_parse_json
@@ -8,9 +11,11 @@ class AvatarOrchestrator:
         self.llm_client = llm_client
         self.model_name = model_name
         self.avatars = {}
+        self.trait_normalizer = TraitNormalizer(llm_client)
 
     def register_avatar(self, key: str, avatar: PsiAvatar):
         self.avatars[key] = avatar
+        avatar.trait_factory = self.trait_normalizer
 
     def process_pipeline(self, user_message: str, message_hist: str) -> dict:
         """核心批处理流：一键让所有注册的智能体感知外部世界并准备好状态"""
@@ -39,7 +44,7 @@ class AvatarOrchestrator:
         for key, avatar in self.avatars.items():
             logger.info(f"Processing {key} character_name {avatar.get_charactor_name()} profession {avatar.get_profession()}")
             try:
-                messages = avatar.get_response_payload(context,user_message)
+                messages = avatar.get_common_chat_payload(context,user_message)
                 response = self.llm_client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,
@@ -49,3 +54,12 @@ class AvatarOrchestrator:
             except Exception as e:
                 responses[key] = f"Generation Error: {e}"
         return responses
+
+    def append_trait(self, key: str, trait_text: str) -> dict:
+        """添加特质"""
+        if key not in self.avatars:
+            logger.info(f"No avatar found for {key}")
+            return {}
+
+        if self.avatars[key]:
+            self.avatars[key].append_trait(trait_text)
