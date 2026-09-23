@@ -22,7 +22,7 @@ class DynamicLoreFactory:
     }
 
     @classmethod
-    def create_core_lore(cls, profession: str, mbti_type: str, ocean_dna: dict) -> str:
+    def create_core_lore(cls, profession: str, mbti_type: str, ocean_dna: dict, personal_traits: dict = None) -> str:
         """
         核心熔炼方法：将【真实职业】与【先天特征描述】完美融合成大模型无冲突的提示词
         """
@@ -76,12 +76,29 @@ class DynamicLoreFactory:
             # (在冷冰冰或竞争极度激烈的领域工作，你有时会经历道德摩擦，本能地希望容纳人性的脆弱，而不是将一切都视为冰冷无情的数据点。)
         conflict_desc = " " + " ".join(conflict_pieces) if conflict_pieces else ""
 
+        trait_injection = ""
+        if personal_traits:
+            # 动态抽离喜好与意识形态立场，直接作为最高意志强行焊死在提示词中
+            fav_food = personal_traits.get("favorite_food", "")
+            stance = personal_traits.get("ideological_stance", "")
+            biography = personal_traits.get("biography", "")
+
+            pieces = []
+            if fav_food: pieces.append(
+                f"In your personal life, you have specific, concrete habits: you absolutely love {fav_food}.")
+            if stance: pieces.append(
+                f"Regarding global events and systemic choices, your core worldview leans heavily toward: {stance}.")
+            if biography: pieces.append(biography)
+
+            if pieces:
+                trait_injection = " " + " ".join(pieces)
+
         # 3. 提取情绪坚韧度尾缀 (-A vs -T)
         if trait_N < 0.25:
             identity_desc = " Under extreme operational pressure, you remain a rock-solid, stoic professional, absorbing environmental stressors with absolute emotional detachment."
         else:
             identity_desc = " Under pressure, you operate on a highly sensitive wire; you are prone to intense internal anxiety and will exhibit sharp defensive or evasive characteristics if challenged."
 
-            # 4. 拼装最终完整的 ROLE IDENTITY DEFINITION (严格规范句群间空格)
-            final_lore = f"A professional {profession.strip()}. {cognitive_desc}{conflict_desc} {identity_desc}"
-            return final_lore
+        # 4. 拼装最终完整的 ROLE IDENTITY DEFINITION (严格规范句群间空格)
+        final_lore = f"A professional {profession.strip()}. {cognitive_desc}{conflict_desc}{trait_injection} {identity_desc}"
+        return final_lore
