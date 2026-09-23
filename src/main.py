@@ -29,7 +29,7 @@ def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
 
     logger.info("====== STEP 1: INITIAL STABLE STATE ======")
     initial_state = avatar.get_current_avatar_state()
-    prompt = renderer.render_system_prompt(initial_state)
+    prompt = renderer.render_system_prompt(initial_state,[])
     logger.info(prompt)
     logger.info("\n" + "=" * 50 + "\n")
 
@@ -44,7 +44,7 @@ def run_avatar_pipeline(lore_factory: DynamicLoreFactory):
 
     # Extract state right after the computation spike
     furious_state = avatar.get_current_avatar_state()
-    furious_prompt = renderer.render_system_prompt(furious_state)
+    furious_prompt = renderer.render_system_prompt(furious_state,[])
     logger.info(furious_prompt)
 
     # The string generated in `furious_prompt` is what you dispatch to your OpenAI/FastAPI payload loop:
@@ -173,7 +173,7 @@ def run_integrated_lifecycle_test():
     logger.info(avatar.get_current_avatar_state())
     # Extract state right after the computation spike
     # furious_state = avatar.get_current_avatar_state()
-    # furious_prompt = renderer.render_system_prompt(furious_state)
+    # furious_prompt = renderer.render_system_prompt(furious_state,[])
     # logger.info(furious_prompt)
 
 
@@ -205,14 +205,14 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
         profession = "pharmacist",
         lore_factory = lore_factory,
     )
-    cat_intja_content = prompt_cat_intja.render_system_prompt(render_cat_intja)
+    cat_intja_content = prompt_cat_intja.render_system_prompt(render_cat_intja,[])
     logger.debug(f"debug basic information {cat_intja_content}")
     prompt_cat_esfpt = LLMPromptRenderer(
         character_name="cat_esfpt",
         profession="brilliant singer",
         lore_factory=lore_factory,
     )
-    cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(render_cat_esfpt)
+    cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(render_cat_esfpt,[])
     logger.debug(f"debug basic information {cat_esfpt_content}")
 
     #no-mbti and only rules
@@ -262,7 +262,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             cat_intja.update_system_clock()
             new_render_cat_intja = cat_intja.get_current_avatar_state()
             logger.info(f"{cat_intja.p_layer.mbti} occ change................\n{render_cat_intja}\n{new_render_cat_intja}")
-            cat_intja_content = prompt_cat_intja.render_system_prompt(new_render_cat_intja)
+            cat_intja_content = prompt_cat_intja.render_system_prompt(new_render_cat_intja,[])
 
             cat_esfpt_delta = prompt_cat_esfpt.render_reflect_prompt(render_cat_esfpt)
             logger.debug(f"occ value delta estimate ({cat_esfpt.p_layer.mbti}): {cat_esfpt_delta}")
@@ -292,7 +292,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
             cat_esfpt.update_system_clock()
             new_render_cat_esfpt = cat_esfpt.get_current_avatar_state()
             logger.info(f"{cat_esfpt.p_layer.mbti} occ change................\n{render_cat_esfpt}\n{new_render_cat_esfpt}")
-            cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(new_render_cat_esfpt)
+            cat_esfpt_content = prompt_cat_esfpt.render_system_prompt(new_render_cat_esfpt,[])
 
             #personal answer
             benchmark_raw_response = llm_client.chat.completions.create(

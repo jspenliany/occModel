@@ -58,7 +58,7 @@ class LLMPromptRenderer:
         logger.debug("Interpreting dominant emotions...end")
         return [descriptions.get(emo, f"Feeling active {emo}.") for emo in active]
 
-    def render_system_prompt(self, avatar_state: dict) -> str:
+    def render_system_prompt(self, avatar_state: dict, trait_list: list = None) -> str:
         """
         Main interface method:
         Generates the final comprehensive System Prompt string injected directly into the LLM API.
@@ -76,6 +76,13 @@ class LLMPromptRenderer:
 
         #get core_lore
         core_lore = self.lore_factory.create_core_lore(self.profession, mbti, ocean_dna)
+        #get traits
+        trait_str = "None"
+        if trait_list:
+            trait_str = "\n".join([
+                f"- [{t['domain'].upper()}] Tags: {t['topic_tags']}, Entities: {t['linked_entities']}, Mode: {t['action_mode']}"
+                for t in trait_list
+            ])
 
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
@@ -83,6 +90,9 @@ class LLMPromptRenderer:
 You are an advanced digital avatar simulating an autonomous human psyche.
 Name: {self.character_name}
 Background Core Lore: {core_lore} 
+
+### HARD-WIRED PERSONALITY TRAITS & BIOLOGICAL LIMITS
+{trait_str}
 
 ### COGNITIVE PERSONALITY ENGINE STATE (PSI-DNA)
 
@@ -159,7 +169,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
 
-    def render_reflect_prompt(self, avatar_state: dict) -> dict:
+    def render_reflect_prompt(self, avatar_state: dict) -> str:
         """
         external input affect occ model:
         reflect message content into occ values.
@@ -222,9 +232,8 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("reflect message_content into occ values...end")
         return reflect_prompt.strip()
 
-    def render_trait_prompt(self) -> dict:
-        trait_prompt = f"""
-        # ROLE & TASK
+    def render_trait_prompt(self) -> str:
+        trait_prompt = f"""# ROLE & TASK
 你是一个高精度的“人格特质结构化转换引擎”。
 你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质碎片），在不破坏、不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数。
 
@@ -263,12 +272,9 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 # OUTPUT FORMAT CONSTRAINT (CRITICAL)
 你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、Markdown 的 ```json 标记包裹或任何分析文字。确保可以直接被 Python 的 `json.loads()` 完美解析。
 最终输出样式：
-{
-  "domain": "...",
-  "topic_tags": ["...", "..."],
-  "linked_entities": ["...", "..."],
-  "emotional_weight": 0.00,
-  "action_mode": "..."
-}
+[
+  {{ "domain": "physiological_limit", "topic_tags": ["food_allergy"], "linked_entities": ["chinese_yam"], "emotional_weight": 0.8, "action_mode": "avoid" }},
+  {{ "domain": "preference", "topic_tags": ["reading_taste"], "linked_entities": ["scifi"], "emotional_weight": 0.6, "action_mode": "approach" }}
+]
 """
         return trait_prompt.strip()

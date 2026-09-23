@@ -62,4 +62,4 @@ class AvatarOrchestrator:
             return {}
 
         if self.avatars[key]:
-            self.avatars[key].append_trait(trait_text)
+            self.avatars[key].append_new_trait(trait_text)

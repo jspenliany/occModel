@@ -27,7 +27,7 @@ class PsiAvatar:
             lore_factory=lore_factory,
         )
         self.trait_factory = trait_factory
-        self.trait_content = {}
+        self.trait_list = []
         self.message_history = AvatarChatHistory()
 
     def get_reflect_payload(self, context: str, user_input: str) -> list:
@@ -68,7 +68,7 @@ class PsiAvatar:
     def get_common_chat_payload(self, context: str, user_input: str) -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         current_state = self.engine.get_current_avatar_state()
-        system_prompt = self.renderer.render_system_prompt(current_state)
+        system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list)
         logger.debug(f"get_response_payload system_prompt: {system_prompt}")
         self.message_history.add_user_message(user_input)
 
@@ -94,6 +94,11 @@ class PsiAvatar:
             logger.debug(f"append_new_trait message: {trait_text}")
             return trait_text
 
-        self.trait_content = self.trait_factory.normalize_new_chunk(message_list)
-        logger.info(f"{self.character_name} {self.profession} has trait info : {self.trait_content}")
+        normalized_node = self.trait_factory.normalize_new_chunk(message_list)
+        if isinstance(normalized_node.get("normalized_params"), list):
+            self.trait_list.extend(normalized_node["normalized_params"])
+        else:
+            self.trait_list.append(normalized_node["normalized_params"])
+
+        logger.info(f"{self.character_name} 当前特质库总数: {len(self.trait_list)}")
         return "success"
