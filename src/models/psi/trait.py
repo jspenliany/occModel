@@ -1,6 +1,6 @@
 import json
 from src.logger_singleton import logger
-from src.utils.util_json import extract_and_parse_json, get_now_time
+from src.utils.util_json import extract_and_parse_json_list, get_now_time
 
 
 class TraitNormalizer:
@@ -20,7 +20,7 @@ class TraitNormalizer:
                 temperature=0.4,
             )
             raw_text = response.choices[0].message.content.strip()
-            appraisal_data = extract_and_parse_json(raw_text)
+            appraisal_data = extract_and_parse_json_list(raw_text)
 
             # 拼装双轨制最终存储实体（原文承载语感，参数用于精准硬检索）
             trait_memory_node = {

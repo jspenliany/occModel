@@ -235,27 +235,27 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
     def render_trait_prompt(self) -> str:
         trait_prompt = f"""# ROLE & TASK
 你是一个高精度的“人格特质结构化转换引擎”。
-你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质碎片），在不破坏、不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数。
+你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质碎片），在不破坏、不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数数组。
 
 # NORMALIZATION SCHEMA & RULES (严格执行字段定义)
-输出的 JSON 字典必须且只能包含以下 5 个核心键名，严禁自定义其他任何键名：
+输出的 JSON 数组中的每一个对象必须且只能包含以下 5 个核心键名：
 
 1. "domain" (核心领域分类)
-   - 数据类型：String (ASCII 字符串枚举)
    - 必须且只能从以下 5 个固定领域中选择一个：
      - "preference": 属于个人的生活喜好、饮食习惯、审美偏好、日常行为方式。
-     - "ideology": 属于个人的世界观、价值观、政治/环保立场、对宏观公共事件的态度、意识形态。
+     - "ideology": 属于个人的世界观、价值观、意识形态。
      - "habit": 长期形成的生理、工作或作息习惯。
-     - "taboo": 心理防线、绝对无法容忍的禁忌、引发极端反感的特定行为或话题。
-     - "physiological_limit" (生理/物理刚性限制)：专门用于承载过敏源（如花生过敏、酒精过敏）、色盲、夜盲、或特定身体客观限制。
+     - "taboo": 绝对无法容忍的禁忌、引发极端反感的特定行为或话题。
+     - "physiological_limit": 专门用于承载过敏源（如特定过敏）、色盲、夜盲等身体客观限制。
 
 2. "topic_tags" (标准主题标签)
-   - 数据类型：Array of Strings
-   - 规则：将散落的表述抽象为 1-3 个全局通用的二级分类英文标签（使用下划线蛇形命名法，例如：["marine_pollution", "diet_habit"]）。
+   - 数据类型：Array of Strings (1-2个标签，下划线蛇形命名)
+   - 约束：标签必须高度收敛和规范。饮食相关统一用 ["diet_habit"]，喜好相关用 ["interest_hobby"]，过敏或生理限制统一用 ["physiological_condition"]。
 
 3. "linked_entities" (实体链接库)
    - 数据类型：Array of Strings
-   - 规则：精确提取原文中涉及的核心名词、国家、具体事物（统一转换为小写英文，例如：["japan", "seafood", "nuclear_wastewater"]）。若无具体实体则返回空数组 []。
+   - 约束：精确提取原文涉及的核心名词（小写英文）。
+   - 兜底规则：若原文表述包含某种特质但实体泛指/模糊（例如：“对特定的物品过敏”、“喜欢某些运动”），严禁返回空数组 []！你必须提取出其泛指的上位概念词作为实体（例如：["unspecified_items"] 或 ["certain_sports"]），以便后续系统进行模糊匹配。
 
 4. "emotional_weight" (情感共鸣权重/敏感度)
    - 数据类型：Float
@@ -269,12 +269,15 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
      - "avoid": 规避型（表达讨厌、拒绝、防御、远离、抵制该特质）。
      - "neutral": 中立型（仅仅是客观陈述一个习惯或状态，无明显趋向）。
 
-# OUTPUT FORMAT CONSTRAINT (CRITICAL)
-你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、Markdown 的 ```json 标记包裹或任何分析文字。确保可以直接被 Python 的 `json.loads()` 完美解析。
-最终输出样式：
+# 🌟 CRITICAL NEGATION & FILTERING RULES (否定与过滤铁律 - 极其重要)
+- ⚠️【状态否定剪枝】：当输入文本明确表达“没有/不存在/不具备”某种特质、爱好或生理限制时（例如：“没有食物过敏”、“从不挑食”、“不喜欢任何运动”），这意味着该个体在这一块是【无特质/空白状态】。你【绝对不能】为这种否定句生成任何 JSON 节点！直接将其从最终数组中剔除。
+- 只有当表达“不喜欢吃某物（主观厌恶）”时才保留并设为 "avoid"；表达“对某物没有概念/无所谓”或“没有某种客观限制”时，一律过滤，不予生成。
+
+# OUTPUT FORMAT CONSTRAINT
+你必须且只能输出标准的 JSON Array 格式（以 [ 开头，以 ] 结尾），绝不包含任何正文解释、Markdown 的 ```json 标记包裹或任何分析文字。
+最终输出样式参考：
 [
-  {{ "domain": "physiological_limit", "topic_tags": ["food_allergy"], "linked_entities": ["chinese_yam"], "emotional_weight": 0.8, "action_mode": "avoid" }},
-  {{ "domain": "preference", "topic_tags": ["reading_taste"], "linked_entities": ["scifi"], "emotional_weight": 0.6, "action_mode": "approach" }}
+  {{ "domain": "preference", "topic_tags": ["diet_habit"], "linked_entities": ["ginger"], "emotional_weight": 0.4, "action_mode": "avoid" }}
 ]
 """
         return trait_prompt.strip()

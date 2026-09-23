@@ -1,6 +1,5 @@
 from src.models.psi.bridge import PSI3DGlassBridge
 from src.logger_singleton import logger
-from src.models.psi.trait import TraitNormalizer
 from src.prompts.prompt_renderer import LLMPromptRenderer
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
@@ -9,7 +8,6 @@ from openai.types.chat import (
     ChatCompletionMessageParam
 )
 from src.message.message_hist import AvatarChatHistory
-import json
 
 
 class PsiAvatar:
