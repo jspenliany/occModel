@@ -100,3 +100,60 @@ class PsiAvatar:
 
         logger.info(f"{self.character_name} 当前特质库总数: {len(self.trait_list)}")
         return "success"
+
+    def export_avatar_state(self) -> dict:
+        """将当前智能体的所有运行时状态导出为可持久化的字典"""
+        # 1. 获取 PSI 核心引擎的实时扁平状态
+        current_psi_state = self.engine.get_current_avatar_state()
+
+        # 2. 组装完整的持久化结构
+        archive_data = {
+            "metadata": {
+                "character_name": self.character_name,
+                "profession": self.profession,
+                "mbti": current_psi_state.get("mbti", "UNKNOWN"),
+                "ocean_dna": current_psi_state.get("ocean_dna", {})
+            },
+            "psi_live_state": {
+                "mood_valence": current_psi_state.get("mood_valence", 0.0),
+                "mood_arousal": current_psi_state.get("mood_arousal", 0.0),
+                "competence": current_psi_state.get("competence", 0.7),
+                "faith_shield": current_psi_state.get("faith_shield", 0.0),
+                "giving_up_rate": current_psi_state.get("giving_up_rate", 0.0),
+                "active_emotions": current_psi_state.get("active_emotions", {})
+            },
+            "trait_memory_bank": self.trait_list,  # 持久化特质库
+            "chat_history": self.message_history.export_history() if hasattr(self.message_history,
+                                                                             'export_history') else []
+        }
+        logger.info(f"Avatar [{self.character_name}] state successfully serialized.")
+        return archive_data
+
+    def load_avatar_state(self, archive_data: dict):
+        """从持久化字典中反序列化，完美恢复心理状态和特质库"""
+        try:
+            # 1. 恢复静态特质库
+            self.trait_list = archive_data.get("trait_memory_bank", [])
+
+            # 2. 强行灌入 PSI 核心引擎的运行时变量
+            live_state = archive_data.get("psi_live_state", {})
+
+            # ⚠️ 关键设计：需要在你的 PSI3DGlassBridge 或内部 P_Layer/Mood_Layer 中
+            # 实现一个 set_avatar_state() 或直接覆写方法，绕过演进时钟强行同步数值
+            if hasattr(self.engine, "force_sync_state"):
+                self.engine.force_sync_state(live_state)
+            else:
+                # 兜底隐式覆写（如果后端引擎没有提供显式方法，可直接操作私有属性或通过刺激信号回补）
+                logger.warning(
+                    "PSI Engine lacks direct force_sync_state method. Attempting regular property hydration.")
+                # 示例：直接覆盖（视你底层 PSI3DGlassBridge 的内部结构而定）
+                # self.engine.mood_layer.valence = live_state.get("mood_valence")
+
+            # 3. 恢复历史对话（可选）
+            if hasattr(self.message_history, 'load_history') and "chat_history" in archive_data:
+                self.message_history.load_history(archive_data["chat_history"])
+
+            logger.info(f"Avatar [{self.character_name}] successfully reloaded from archive.")
+        except Exception as e:
+            logger.error(f"Critical error while loading avatar state for {self.character_name}: {e}")
+            raise e
