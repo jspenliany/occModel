@@ -20,8 +20,9 @@ class TraitNormalizer:
                 temperature=0.4,
             )
             raw_text = response.choices[0].message.content.strip()
+            logger.debug(f"trait normalization successfully synced to memory block. \n{raw_text}\n")
             appraisal_data = extract_and_parse_json_list(raw_text)
-
+            logger.info(f"{appraisal_data}")
             # 拼装双轨制最终存储实体（原文承载语感，参数用于精准硬检索）
             trait_memory_node = {
                 "avatar_id": "not_init",
