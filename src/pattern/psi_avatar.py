@@ -7,7 +7,9 @@ from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam
 )
+from dataclasses import asdict
 from src.message.message_hist import AvatarChatHistory
+from src.models.memory.memory_node import CoreMemoryNode
 
 
 class PsiAvatar:
@@ -26,6 +28,7 @@ class PsiAvatar:
         )
         self.trait_factory = trait_factory
         self.trait_list = []
+        self.core_memories: list[CoreMemoryNode] = []
         self.message_history = AvatarChatHistory()
 
     def get_reflect_payload(self, context: str, user_input: str) -> list:
@@ -105,24 +108,19 @@ class PsiAvatar:
         """将当前智能体的所有运行时状态导出为可持久化的字典"""
         # 1. 获取 PSI 核心引擎的实时扁平状态
         current_psi_state = self.engine.get_current_avatar_state()
+        engine_snapshot = self.engine.to_dict()
 
         # 2. 组装完整的持久化结构
         archive_data = {
             "metadata": {
                 "character_name": self.character_name,
                 "profession": self.profession,
-                "mbti": current_psi_state.get("mbti", "UNKNOWN"),
-                "ocean_dna": current_psi_state.get("ocean_dna", {})
+                "mbti": self.engine.p_layer.mbti,
+                "ocean_dna": self.engine.p_layer.ocean
             },
-            "psi_live_state": {
-                "mood_valence": current_psi_state.get("mood_valence", 0.0),
-                "mood_arousal": current_psi_state.get("mood_arousal", 0.0),
-                "competence": current_psi_state.get("competence", 0.7),
-                "faith_shield": current_psi_state.get("faith_shield", 0.0),
-                "giving_up_rate": current_psi_state.get("giving_up_rate", 0.0),
-                "active_emotions": current_psi_state.get("active_emotions", {})
-            },
+            "psi_live_state": engine_snapshot,
             "trait_memory_bank": self.trait_list,  # 持久化特质库
+            "core_memory_bank": [asdict(m) for m in self.core_memories],   # 核心记忆库
             "chat_history": self.message_history.export_history() if hasattr(self.message_history,
                                                                              'export_history') else []
         }
@@ -130,30 +128,59 @@ class PsiAvatar:
         return archive_data
 
     def load_avatar_state(self, archive_data: dict):
-        """从持久化字典中反序列化，完美恢复心理状态和特质库"""
+        """
+        从持久化字典中反序列化，完美恢复元数据、深层 PSI 心理状态、特质库、核心记忆与会话历史
+        """
         try:
-            # 1. 恢复静态特质库
-            self.trait_list = archive_data.get("trait_memory_bank", [])
+            # 1. 恢复元数据层身份属性（防止冷启动实例化后属性未同步）
+            metadata = archive_data.get("metadata", {})
+            self.character_name = metadata.get("character_name", self.character_name)
+            self.profession = metadata.get("profession", self.profession)
 
-            # 2. 强行灌入 PSI 核心引擎的运行时变量
+            # 提取元数据中的基因锚点（MBTI & OCEAN），便于引擎强制对齐
+            mbti = metadata.get("mbti", "UNKNOWN")
+            ocean_dna = metadata.get("ocean_dna", {})
+
+            # 2. 强行灌入来自 engine.to_dict() 的全量运行时图谱变量
+            # 此时的 live_state 包含更深层的未舍入浮点数及 counters / flags 快照
             live_state = archive_data.get("psi_live_state", {})
 
-            # ⚠️ 关键设计：需要在你的 PSI3DGlassBridge 或内部 P_Layer/Mood_Layer 中
-            # 实现一个 set_avatar_state() 或直接覆写方法，绕过演进时钟强行同步数值
+            # 优先使用强同步接口，将元数据设定与运行时状态树一同揉碎灌入底层各个子 Layer
             if hasattr(self.engine, "force_sync_state"):
-                self.engine.force_sync_state(live_state)
+                # 组装强同步 payload，确保底层能同步恢复状态图谱与计数器
+                full_sync_payload = {
+                    "mbti": mbti,
+                    "ocean_dna": ocean_dna,
+                    **live_state
+                }
+                self.engine.force_sync_state(full_sync_payload)
             else:
-                # 兜底隐式覆写（如果后端引擎没有提供显式方法，可直接操作私有属性或通过刺激信号回补）
+                # 兜底隐式覆写：若底层没有提供强同步 broker，则手动向下水管道属性直接灌入
                 logger.warning(
                     "PSI Engine lacks direct force_sync_state method. Attempting regular property hydration.")
-                # 示例：直接覆盖（视你底层 PSI3DGlassBridge 的内部结构而定）
-                # self.engine.mood_layer.valence = live_state.get("mood_valence")
+                # 恢复基础性格特征
+                if hasattr(self.engine, 'p_layer'):
+                    self.engine.p_layer.mbti = mbti
+                    self.engine.p_layer.ocean = ocean_dna
 
-            # 3. 恢复历史对话（可选）
+                # 恢复隐藏标志位与演进计数器（依据底层 bridge 的设计决定）
+                if "anger_habit_counter" in live_state:
+                    self.engine.anger_habit_counter = live_state["anger_habit_counter"]
+                if "in_hardship_flag" in live_state:
+                    self.engine.in_hardship_flag = live_state["in_hardship_flag"]
+
+            # 3. 恢复静态特质知识库（已经是纯 dict 列表，安全）
+            self.trait_list = archive_data.get("trait_memory_bank", [])
+
+            # 4. 恢复不可磨灭的强类型核心记忆库（通过解包实例化为 CoreMemoryNode 类对象）
+            raw_core_mems = archive_data.get("core_memory_bank", [])
+            self.core_memories = [CoreMemoryNode(**m) for m in raw_core_mems]
+
+            # 5. 恢复短期近景历史对话会话存根（调用上一轮修复的强类型滑动窗口反序列化器）
             if hasattr(self.message_history, 'load_history') and "chat_history" in archive_data:
                 self.message_history.load_history(archive_data["chat_history"])
 
-            logger.info(f"Avatar [{self.character_name}] successfully reloaded from archive.")
+            logger.info(f"Avatar [{self.character_name}] state and personality metadata successfully reloaded.")
         except Exception as e:
             logger.error(f"Critical error while loading avatar state for {self.character_name}: {e}")
             raise e

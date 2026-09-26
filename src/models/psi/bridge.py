@@ -98,6 +98,39 @@ class PSI3DGlassBridge:
             "in_hardship_flag": self.in_hardship_flag
         }
 
+    def force_sync_state(self, payload: dict):
+        """
+        🌟 核心补齐：将全量序列化字典/强同步Payload动态灌入现有引擎实例中
+        实现深层网络的递归恢复，确保浮点数精度、计数器与标志位不丢失
+        """
+        try:
+            # 1. 恢复宏观职业信息
+            self.profession = payload.get("profession", self.profession)
+
+            # 2. 恢复标志位与习惯演进计数器
+            self.anger_habit_counter = payload.get("anger_habit_counter", self.anger_habit_counter)
+            self.in_hardship_flag = payload.get("in_hardship_flag", self.in_hardship_flag)
+
+            # 3. 递归驱动子层级的反序列化重载
+            # 优先调用子层级类自带的 from_dict 进行重建挂载
+            if "personality" in payload and hasattr(PersonalityLayer, "from_dict"):
+                self.p_layer = PersonalityLayer.from_dict(payload["personality"])
+            elif "ocean_dna" in payload and hasattr(self.p_layer, "ocean"):
+                # 兜底扁平数据容错：如果外部只传了扁平的元数据，则直接强灌基因字典
+                self.p_layer.ocean = payload["ocean_dna"]
+                if "mbti" in payload:
+                    self.p_layer.mbti = payload["mbti"]
+
+            if "mood" in payload and hasattr(MoodLayer, "from_dict"):
+                self.m_layer = MoodLayer.from_dict(payload["mood"])
+
+            if "emotion" in payload and hasattr(OCCEmotionLayer, "from_dict"):
+                self.e_layer = OCCEmotionLayer.from_dict(payload["emotion"])
+
+            logger.info("PSI3DGlassBridge successfully executed recursive force_sync_state.")
+        except Exception as e:
+            logger.error(f"Failed to force sync PSI3DGlassBridge state graph: {e}")
+            raise e
     @classmethod
     def load_bridge(cls, state_dict: dict) -> 'PSI3DGlassBridge':
         bridge = cls.__new__(cls)
