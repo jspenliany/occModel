@@ -7,12 +7,21 @@ from src.utils.util_json import extract_and_parse_json
 
 class AvatarOrchestrator:
     """管理多个数字生命，统一驱动流水线"""
-    def __init__(self, llm_client, model_name="google/gemma-4-31b-it", storage_dir="storage/avatars"):
+    def __init__(self, llm_client, model_name="google/gemma-4-31b-it", storage_dir="data/psyche_storage"):
         self.llm_client = llm_client
         self.model_name = model_name
         self.avatars = {}
         self.trait_normalizer = TraitNormalizer(llm_client)
-        self.storage_dir = storage_dir
+        #获取当前 avatar_orchestrator.py 所在的绝对目录 (即 src/pattern/)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # 向上跳两层：src/pattern/ -> src/ -> 项目根目录
+        project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+        #拼接指向根目录下的 data/psyche_storage
+        self.storage_dir = os.path.join(project_root, "data", "psyche_storage")
+        #确保目录被自动创建
+        os.makedirs(self.storage_dir, exist_ok=True)
+
+        logger.info(f"Strict path hydration complete: {self.storage_dir}")
 
     def register_avatar(self, key: str, avatar: PsiAvatar):
         self.avatars[key] = avatar
