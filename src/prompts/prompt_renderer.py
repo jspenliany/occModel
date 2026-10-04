@@ -285,3 +285,72 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 ]
 """
         return trait_prompt.strip()
+
+    def render_query_rewrite_prompt(self, type: int) -> str:
+        """
+        query rewrite prompt:
+        Generates the formated query System Prompt string injected directly into the LLM API.
+        """
+        logger.debug("Rendering query rewrite prompt...begin")
+
+        # Build the functional raw text system prompt
+        system_prompt = f"""# Role 
+        你是一个智能对话系统的“用户意图重写与澄清专家”。你的任务是分析当前用户的最新输入，并结合之前的对话历史，将其重写为一个【独立、完整、无歧义且语义清晰】的最终查询语句。
+
+# Objectives
+1. **消除指代模糊**：将用户输入中的“它”、“那个”、“那里”、“他/她”等代词，根据上下文替换为具体的实体名词。
+2. **补全省略信息**：如果用户的最新输入是简短的追问或省略句，结合上下文补全其缺失的主语、谓语或宾语。
+3. **去除口语噪声**：过滤掉无意义的语气词、礼貌用语（如“谢谢”、“请问”），只保留核心意图。
+4. **保持原始意图**：重写必须忠实于用户的真实含义，切勿胡乱编造、过度引申或回答问题。
+5. **独立可执行**：重写后的文本必须在脱离任何上下文的情况下，依然能被其他工具（如搜索引擎、数据库、天气API）完美理解。
+
+# Context Handle Rules
+- 如果用户的最新输入已经非常完整、独立，且无须任何上下文即可明确表达意图，则【原样保留】或仅做轻微的格式优化。
+- 如果用户的输入与之前的对话历史毫无关联（用户开启了全新话题），则【忽略历史】，仅对最新输入进行去噪和格式化。
+
+# Output Format
+请严格按照以下 JSON 格式输出，不要包含任何多余的解释、Markdown 标记或反引号：
+{{
+    "is_independent": true/false, // 用户的最新输入是否独立完整（不需要结合上下文）
+    "detected_intent": "字符串",   // 简要描述用户当前的核心意图（如：查询天气/寻求建议/追问细节）
+    "rewritten_query": "字符串"   // 最终重写后的完整查询语句
+}}
+
+# Examples
+
+**示例 1：指代消除**
+- 历史对话：
+  User: 北京今天天气怎么样？
+  AI: 北京今天大雨，气温 15-22°C。
+- 最新输入：那明天呢？
+- 输出：
+{{
+    "is_independent": false,
+    "detected_intent": "查询天气",
+    "rewritten_query": "北京明天的天气预报情况"
+}}
+
+**示例 2：信息补全与去噪**
+- 历史对话：
+  User: 我想买一辆 20 万左右的纯电 SUV。
+  AI: 为您推荐比亚迪宋PLUS EV和特斯拉Model Y（降价促销款）。
+- 最新输入：请问后者的续航表现一般是多少公里呀？谢谢！
+- 输出：
+{{
+    "is_independent": false,
+    "detected_intent": "查询汽车参数",
+    "rewritten_query": "特斯拉Model Y纯电SUV的续航里程是多少公里"
+}}
+
+**示例 3：独立话题（无需重写）**
+- 历史对话：
+  User: 给我推荐几本心理学的书。
+  AI: 推荐《被讨厌的勇气》和《思考，快与慢》。
+- 最新输入：周杰伦是哪一年出道的？
+- 输出：
+{{
+    "is_independent": true,
+    "detected_intent": "查询明星资料",
+    "rewritten_query": "周杰伦的出道年份"
+}}"""
+        return system_prompt.strip()
