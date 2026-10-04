@@ -1,12 +1,31 @@
-社交/人际特质 (Interpersonal Traits)：例如“社交恐惧”、“强势地主导对话”、“对他人的依赖感”。目前的 domain 中没有专门承载“对他人的态度”或“社交风格”的维度（除非强行塞入 ideology）。
-认知风格 (Cognitive Style)：例如“直觉型”、“细节控”、“发散性思维”。这属于处理信息的方式，而非单纯的价值观。
-动态/情境特质 (Contextual Traits)：例如“在工作中严肃但在家人面前温柔”。目前模型假设特质是静态的全局变量。
-如果你希望该提示词能够更完整地收集个体数据，建议在 domain 中增加以下定义：
-
-增加 social_style (社交风格)：
-描述：个体在与他人交互时的默认模式（如：内敛、攻击性、讨好、疏离）。
-增加 cognitive_pattern (认知模式)：
-描述：个体处理信息和思考问题的方式（如：逻辑至上、情感驱动、细节导向）。
-从“转换引擎”升级为“推理引擎”：
-在提示词中加入：“如果用户描述了一个具体行为（例如：他每天早晨 4 点起床跑步），请推理并提取其隐含特质（例如：domain: habit, topic: self_discipline）。”
-总结： 如果你的输入源是详尽的人格问卷或日记，这个提示词足够完美；如果你希望通过碎片化对话来“摸清”一个人，你还需要一个主动探测逻辑来配合这个转换引擎
+def append_new_trait(self, trait_text: str):
+    # 1. 通过 LLM 将文本转换为结构化节点
+    normalized_node = self.trait_factory.normalize_new_chunk(...)
+    
+    # 2. 提取实体作为 Key (假设取第一个主实体)
+    entities = normalized_node.get("linked_entities", [])
+    if not entities: return "no_entity_found"
+    
+    primary_key = entities[0] 
+    
+    # 3. 执行合并逻辑
+    if primary_key in self.trait_map:
+        existing_trait = self.trait_map[primary_key]
+        
+        # 更新权重：取最大值 (代表最强烈的认知)
+        existing_trait['emotional_weight'] = max(
+            existing_trait['emotional_weight'], 
+            normalized_node['emotional_weight']
+        )
+        
+        # 检查冲突：如果行为模式改变，视为特质演进
+        if existing_trait['action_mode'] != normalized_node['action_mode']:
+            logger.info(f"Trait Shift detected for {primary_key}!")
+            existing_trait['action_mode'] = normalized_node['action_mode']
+            
+        # 增加权重/频次计数
+        existing_trait['mention_count'] = existing_trait.get('mention_count', 1) + 1
+    else:
+        # 新特质，直接存入
+        normalized_node['mention_count'] = 1
+        self.trait_map[primary_key] = normalized_node
