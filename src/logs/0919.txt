@@ -1,41 +1,12 @@
- DEBUG - trait normalization successfully synced to memory block. 
-[
-  {
-    "domain": "preference",
-    "topic_tags": ["diet_preference"],
-    "linked_entities": ["ginger"],
-    "emotional_weight": 0.4,
-    "action_mode": "avoid"
-  },
-  {
-    "domain": "preference",
-    "topic_tags": ["diet_preference"],
-    "linked_entities": ["green_onion"],
-    "emotional_weight": 0.4,
-    "action_mode": "approach"
-  },
-  {
-    "domain": "physiological_limit",
-    "topic_tags": ["food_allergy"],
-    "linked_entities": [],
-    "emotional_weight": 0.1,
-    "action_mode": "neutral"
-  },
-  {
-    "domain": "physiological_limit",
-    "topic_tags": ["allergy"],
-    "linked_entities": [],
-    "emotional_weight": 0.5,
-    "action_mode": "avoid"
-  },
-  {
-    "domain": "preference",
-    "topic_tags": ["media_preference"],
-    "linked_entities": ["scifi"],
-    "emotional_weight": 0.6,
-    "action_mode": "approach"
-  }
-]
+社交/人际特质 (Interpersonal Traits)：例如“社交恐惧”、“强势地主导对话”、“对他人的依赖感”。目前的 domain 中没有专门承载“对他人的态度”或“社交风格”的维度（除非强行塞入 ideology）。
+认知风格 (Cognitive Style)：例如“直觉型”、“细节控”、“发散性思维”。这属于处理信息的方式，而非单纯的价值观。
+动态/情境特质 (Contextual Traits)：例如“在工作中严肃但在家人面前温柔”。目前模型假设特质是静态的全局变量。
+如果你希望该提示词能够更完整地收集个体数据，建议在 domain 中增加以下定义：
 
-2026-09-23 05:30:04 - ERROR - Ti-Engine Guard Triggered! Normalization output invalid: Extra data: line 7 column 4 (char 163)
-2026-09-23 05:30:04 - INFO - cat_intja 当前特质库总数: 1:喜欢吃姜，但是喜欢吃葱花。没有食物过敏。但是对特定的物品存在过敏。喜欢科幻类作品
+增加 social_style (社交风格)：
+描述：个体在与他人交互时的默认模式（如：内敛、攻击性、讨好、疏离）。
+增加 cognitive_pattern (认知模式)：
+描述：个体处理信息和思考问题的方式（如：逻辑至上、情感驱动、细节导向）。
+从“转换引擎”升级为“推理引擎”：
+在提示词中加入：“如果用户描述了一个具体行为（例如：他每天早晨 4 点起床跑步），请推理并提取其隐含特质（例如：domain: habit, topic: self_discipline）。”
+总结： 如果你的输入源是详尽的人格问卷或日记，这个提示词足够完美；如果你希望通过碎片化对话来“摸清”一个人，你还需要一个主动探测逻辑来配合这个转换引擎
