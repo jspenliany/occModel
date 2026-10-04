@@ -58,6 +58,28 @@ class LLMPromptRenderer:
         logger.debug("Interpreting dominant emotions...end")
         return [descriptions.get(emo, f"Feeling active {emo}.") for emo in active]
 
+    def _format_trait_intensity(self, trait: dict) -> str:
+        """
+        辅助方法：将特质的提及频次(mention_count)和异变状态，
+        翻译为对大模型具有强行为约束力的心理学阶梯化描述。
+        """
+        count = trait.get("mention_count", 1)
+        domain = str(trait.get("domain", "")).upper()
+        tags = trait.get("topic_tags", ["general"])
+        entities = trait.get("linked_entities", ["unspecified"])
+        mode = str(trait.get("action_mode", "")).upper()
+
+        # 1. 心理学频次阶梯路由 (Personality Entrenchment Tiers)
+        if count == 1:
+            tier_desc = "✨ [新近提及/新生概念] - 刚刚显露出的特征苗头，尚浅，扮演时无需过度夸张。"
+        elif 2 <= count <= 4:
+            tier_desc = "📈 [常态行为习惯] - 已经在日常生活中固化的行为偏好或观念。"
+        else:  # count >= 5
+            tier_desc = "🔥 [根深蒂固的老毛病/极深执念] - 无法动摇的核心死穴，遇到相关话题必须表现出极端的敏感与情绪共鸣！"
+
+        # 2. 组装格式化字符串
+        return f"- [{domain}] {tier_desc} Tags: {tags}, Entities: {entities}, Intent Mode: {mode} (Mention Count: {count})"
+
     def render_system_prompt(self, avatar_state: dict, trait_list: list = None) -> str:
         """
         Main interface method:
@@ -79,10 +101,8 @@ class LLMPromptRenderer:
         #get traits
         trait_str = "None"
         if trait_list:
-            trait_str = "\n".join([
-                f"- [{t['domain'].upper()}] Tags: {t['topic_tags']}, Entities: {t['linked_entities']}, Mode: {t['action_mode']}"
-                for t in trait_list
-            ])
+            sorted_traits = sorted(trait_list, key=lambda x: x.get("mention_count", 1), reverse=True)
+            trait_str = "\n".join([self._format_trait_intensity(t) for t in sorted_traits])
 
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
