@@ -234,54 +234,50 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 
     def render_trait_prompt(self) -> str:
         trait_prompt = f"""# ROLE & TASK
-你是一个高精度的“人格特质结构化转换引擎”。
-你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质碎片），在不破坏、不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数数组。
+你是一个高精度的“人格特质结构化深度推理引擎”。
+你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质/行为/陈述碎片），**不仅要进行表面语义转换，更要根据角色的具体行为进行深层心理学推理**，在不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数数组。
 
 # NORMALIZATION SCHEMA & RULES (严格执行字段定义)
 输出的 JSON 数组中的每一个对象必须且只能包含以下 5 个核心键名：
 
 1. "domain" (核心领域分类)
-   - 必须且只能从以下 5 个固定领域中选择一个：
+   - 必须且只能从以下 7 个固定领域中选择一个：
      - "preference": 属于个人的生活喜好、饮食习惯、审美偏好、日常行为方式。
-     - "ideology": 属于个人的世界观、价值观、意识形态。
+     - "ideology": 属于个人的世界观、价值观、对宏观公共事件的态度、意识形态或某种主义（ism）。
      - "habit": 长期形成的生理、工作或作息习惯。
      - "taboo": 绝对无法容忍的禁忌、引发极端反感的特定行为或话题。
-     - "physiological_limit": 专门用于承载过敏源（如特定过敏）、色盲、夜盲等身体客观限制。
+     - "physiological_limit": 专门用于承载过敏源、色盲、夜盲等身体客观限制。
+     - "social_style": 个体在与他人交互时的默认社交/人际模式（如：内敛、攻击性、讨好、疏离、直率）。
+     - "cognitive_pattern": 个体处理信息、决策和思考问题的方式（如：逻辑至上、情感驱动、细节导向、大局观）。
 
 2. "topic_tags" (标准主题标签)
    - 数据类型：Array of Strings (1-2个标签，下划线蛇形命名)
-   - 约束：标签必须高度收敛和规范。饮食相关统一用 ["diet_habit"]，喜好相关用 ["interest_hobby"]，过敏或生理限制统一用 ["physiological_condition"]。
-   - 意识形态相关必须收敛到以下标准二级分类：
-       - 价值观偏好用 ["value_system"]（如崇尚自由、尊老爱幼）
-       - 公共/社会/环保立场用 ["social_stance"]（如环保主义、动物保护）
-       - 政治/宏观经济主义用 ["macro_ideology"]（如资本主义、不婚主义、极简主义）
+   - 约束：标签必须高度收敛和规范。
+     - 饮食相关统一用 ["diet_habit"]，喜好相关用 ["interest_hobby"]，过敏或生理限制统一用 ["physiological_condition"]。
+     - 意识形态相关必须收敛到以下标准二级分类：价值观偏好用 ["value_system"]，社会立场用 ["social_stance"]，宏观主义用 ["macro_ideology"]。
+     - 社交与认知约束：社交风格统一使用 ["interpersonal_mode"]，认知模式统一使用 ["thinking_framework"]。
 
 3. "linked_entities" (实体链接库)
    - 数据类型：Array of Strings
-   - 约束：精确提取原文涉及的核心名词（小写英文）；若属于意识形态领域，且文本描述的是某种抽象理念或主义，`linked_entities` 必须提取其标准化学说名称或核心对立实体（例如："environmentalism"（环保主义）, "feminism"（女性主义）, "minimalism"（极简主义）, "traditional_marriage"（传统婚姻观））。
-   - 兜底规则：若原文表述包含某种特质但实体泛指/模糊（例如：“对特定的物品过敏”、“喜欢某些运动”），严禁返回空数组 []！你必须提取出其泛指的上位概念词作为实体（例如：["unspecified_items"] 或 ["certain_sports"]），以便后续系统进行模糊匹配。
+   - 约束：精确提取原文或经由行为推理出的核心名词/抽象特质词（小写英文，例如："ginger", "minimalism", "self_discipline", "introversion"）。
+   - 推理实体规则：如果原文描述的是一个【具体行为】，`linked_entities` 应提取出该行为背后映射出的【隐含心理学特质或核心概念实体】（例如：从“每天早起跑步”中推理出 ["self_discipline"]，从“别人说话总是不敢打断”中推理出 ["people_pleasing"]）。
 
 4. "emotional_weight" (情感共鸣权重/敏感度)
-   - 数据类型：Float
-   - 范围：[0.0 到 1.0]。
-   - 评判标准：原文表达的情绪越激烈、越绝对（如使用“本命”、“极度反感”、“绝对不”），数值越接近 1.0；表达越平淡、属于可有可无的客观描述，数值越接近 0.1。
+   - 数据类型：Float，范围：[0.0 到 1.0]。
+   - 推理权重规则：表达情绪越激烈数值越接近 1.0；若原文是客观描述某项具体行为（如“每天打卡”），则根据该行为的持之以恒程度或极端程度赋予合理的行为特质权重（例如高度习惯/自律赋予 0.7-0.9）。
 
 5. "action_mode" (行为意向模式)
-   - 数据类型：String
-   - 必须且只能从以下 3 个固定枚举中选择一个：
-     - "approach": 接近型（表达喜欢、渴望、追求、持续维持该特质；或坚决拥护、极度信仰、积极践行该意识形态）。
-     - "avoid": 规避型（表达讨厌、拒绝、防御、远离、抵制该特质；或强烈抵制、批判、反感该意识形态或其对立面）。
-     - "neutral": 中立型（仅仅是客观陈述一个习惯或状态，无明显趋向；或仅仅是提及，无明显党同伐异倾向）。
+   - 数据类型：String，必须且只能从 ["approach"（接近/拥护/践行）, "avoid"（规避/抵制/反感）, "neutral"（中立陈述）] 中选择。
 
-# 🌟 CRITICAL NEGATION & FILTERING RULES (否定与过滤铁律 - 极其重要)
-- ⚠️【状态否定剪枝】：当输入文本明确表达“没有/不存在/不具备”某种特质、爱好或生理限制（例如：“没有食物过敏”、“从不挑食”、“不喜欢任何运动”）或信仰时（例如：“我没有任何政治倾向”、“我不属于任何宗教”），这意味着该个体在这一块是【无特质/空白状态】。你【绝对不能】为这种否定句生成任何 JSON 节点！直接将其从最终数组中剔除。
-- 只有当表达“不喜欢吃某物（主观厌恶）”时才保留并设为 "avoid"；表达“对某物没有概念/无所谓”或“没有某种客观限制”时，一律过滤，不予生成。
+# 🌟 CRITICAL INFERENCE & FILTERING RULES (推理与剪枝铁律 - 极其重要)
+- ⚠️【深层行为推理】：**你不仅是转换器，更是推理器**。如果用户描述了一个具体行为或细节（例如：“他买任何东西前都要看三份对比评测”），请必须推理并提取其隐含特质（在此例中：domain: cognitive_pattern, topic_tags: ["thinking_framework"], linked_entities: ["detail_oriented"], action_mode: "approach"）。
+- ⚠️【状态否定剪枝】：当输入文本明确表达“没有/不存在/不具备”某种特质或信仰时（例如：“我没有任何政治倾向”、“从不挑食”），这意味着该个体在这一块是【空白状态】。你【绝对不能】为这种否定句生成任何 JSON 节点！直接将其从最终数组中剔除。
 
 # OUTPUT FORMAT CONSTRAINT
-你必须且只能输出标准的 JSON Array 格式（以 [ 开头，以 ] 结尾），绝不包含任何正文解释、Markdown 的 ```json 标记包裹或任何分析文字。
+你必须且只能输出标准的 JSON Array 格式（以 [ 开头，以 ] 结尾），绝不包含任何正文解释或分析文字。
 最终输出样式参考：
 [
-  {{ "domain": "preference", "topic_tags": ["diet_habit"], "linked_entities": ["ginger"], "emotional_weight": 0.4, "action_mode": "avoid" }}
+  {{ "domain": "cognitive_pattern", "topic_tags": ["thinking_framework"], "linked_entities": ["logical_consistency"], "emotional_weight": 0.8, "action_mode": "approach" }}
 ]
 """
         return trait_prompt.strip()
