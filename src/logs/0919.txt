@@ -1,3 +1,26 @@
-https://zhuanlan.zhihu.com/p/1913504354721333378
-docker run --gpus all -d --restart always -p 8000:8080 -v /home/smart6learn/models/huggingface/gemma4/q4-aqt:/models ghcr.io/ggml-org/llama.cpp:server-cuda13 -c 65535 --cache-type-k q4_0 --cache-type-v q4_0 -m /models/gemma-4-31B_q4_0-it.gguf --port 8080 --host 0.0.0.0 -n 4096 --verbose
-ghcr.io/ggml-org/llama.cpp:server-cuda13
+version: '3.8'
+
+services:
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: llama-gemma4-server
+    restart: always
+    ports:
+      - "8000:8080"
+    volumes:
+      - /home/smart6learn/models/huggingface/gemma4/q4-aqt:/models
+    command: >
+      -m /models/gemma-4-31B_q4_0-it.gguf
+      --host 0.0.0.0
+      --port 8080
+      -c 65535
+      -n 4096
+      --cache-type-k q4_0
+      --cache-type-v q4_0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
