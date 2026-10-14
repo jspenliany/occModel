@@ -1,7 +1,7 @@
 # filename: main.py
 from src.logger_singleton import logger
-from models.psi.bridge import PSI3DGlassBridge
-from prompts.prompt_renderer import LLMPromptRenderer
+from src.models.psi.bridge import PSI3DGlassBridge
+from src.prompts.prompt_renderer import LLMPromptRenderer
 from src.pattern.lore_factory import DynamicLoreFactory
 from openai import OpenAI
 from src.utils.util_json import extract_and_parse_json
@@ -395,7 +395,7 @@ def benchmark_pair_mbti(lore_factory: DynamicLoreFactory):
     logger.info(f"debug basic information {red_isfjt.to_dict()}")
 
 
-def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
+def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory, load_old_snapshot=False):
     llm_client = OpenAI(base_url="http://0.0.0.0:8000/v1", api_key="no-key-required")
     trait_factory = TraitNormalizer(llm_client,"google/gemma-4-31b-it")
     # 初始化协调器
@@ -430,6 +430,7 @@ def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory):
         logger.info("\n" + "-" * 88)
 
         message_hist += user_message
+    orchestrator.save_all_avatars()
 
 
 if __name__ == "__main__":
@@ -438,4 +439,4 @@ if __name__ == "__main__":
     # debug_avatar_pipeline()
     # run_integrated_lifecycle_test()
     # benchmark_pair_mbti(lore_factory)
-    benchmark_pair_mbti_optimized(lore_factory)
+    benchmark_pair_mbti_optimized(lore_factory, False)
