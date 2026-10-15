@@ -1,4 +1,3 @@
-from pyexpat.errors import messages
 import os,json
 from src.models.psi.trait import TraitNormalizer
 from src.pattern.psi_avatar import PsiAvatar
