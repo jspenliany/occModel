@@ -66,12 +66,14 @@ class AvatarOrchestrator:
 
     def append_trait(self, key: str, trait_text: str) -> dict:
         """添加特质"""
+        logger.debug(f"Appending {key} to trait text: {trait_text}...begin")
         if key not in self.avatars:
             logger.info(f"No avatar found for {key}")
             return {}
 
         if self.avatars[key]:
             self.avatars[key].append_new_trait(trait_text)
+        logger.debug(f"Successfully appended {key} to trait text: {trait_text}")
         return {}
 
     def save_all_avatars(self):

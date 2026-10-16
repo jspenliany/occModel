@@ -90,6 +90,7 @@ class PsiAvatar:
         return self.profession
 
     def append_new_trait(self, trait_text: str) -> str:
+        logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
         message_list = self.get_trait_payload("", trait_text)
         if self.trait_factory is None:
             logger.debug(f"append_new_trait message: {trait_text}")
