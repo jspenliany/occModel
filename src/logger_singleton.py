@@ -2,6 +2,7 @@ import logging
 import sys
 import os
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 
 class LoggerSingleton:
     _instance = None
@@ -20,7 +21,7 @@ class LoggerSingleton:
     def setup_logger(self):
         # 🔥 日志文件保存在目录
         os.makedirs("logs", exist_ok=True)
-        log_file = f"logs/app_{datetime.now().strftime('%Y-%m-%d')}.log"
+        base_log_file = "logs/app.log"
 
         # 定义日志格式
         log_format = "%(asctime)s - %(levelname)s - %(message)s"
@@ -38,11 +39,14 @@ class LoggerSingleton:
         root_logger.addHandler(console_handler)
 
         # 2. 文件输出（自动生成 app.log）
-        file_handler = logging.FileHandler(
-            log_file,
-            mode="a",        # 追加模式
+        file_handler = TimedRotatingFileHandler(
+            filename=base_log_file,
+            when="MIDNIGHT",
+            interval=1,
+            backupCount=30,
             encoding="utf-8"
         )
+        file_handler.suffix = "%Y-%m-%d"
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
 
