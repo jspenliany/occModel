@@ -414,18 +414,17 @@ def benchmark_pair_mbti_optimized(lore_factory: DynamicLoreFactory, load_old_sna
             break
 
         user_message = user_input
+        responses = {}
 
         # 🚀 优化后的整洁流：
-        # 1. 驱动所有智能体一键感知、评估认知并更新底层的 PSI 引擎与时钟
-        orchestrator.process_pipeline(user_message, message_hist)
-
-        # 2. 批量生成所有智能体变化后的对话回复
-        avatar_responses = orchestrator.generate_responses(message_hist,user_message)
+        responses["cat_intja"] = orchestrator.chat_turn("cat_intja", message_hist, user_message)
+        responses["cat_esfpt"] = orchestrator.chat_turn("cat_esfpt", message_hist, user_message)
+        responses["cat_intpt"] = orchestrator.chat_turn("cat_intpt", message_hist, user_message)
 
         # 3. 统一结构化打印结果
         logger.info("\n" + "-" * 40 + " OUTPUT " + "-" * 40)
         logger.info(f"User Input: {user_message}")
-        for key, reply in avatar_responses.items():
+        for key, reply in responses.items():
             logger.info(f"[{key} Response]: {reply}")
         logger.info("\n" + "-" * 88)
 

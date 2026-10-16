@@ -64,6 +64,26 @@ class AvatarOrchestrator:
                 responses[key] = f"Generation Error: {e}"
         return responses
 
+    def chat_turn(self, key: str, context: str, user_message: str) -> str:
+        avatar = self.avatars[key]
+
+        # 1. 情感反射阶段：让 LLM 评估当前事件对该角色的 OCC 冲击
+        reflect_payload = avatar.get_reflect_payload(context, user_message)
+        response = self.llm_client.chat.completions.create(
+            model=self.model_name, messages=reflect_payload, temperature=0.4
+        )
+        appraisal_data = extract_and_parse_json(response.choices[0].message.content.strip())
+
+        # 2. 状态内化与时钟演进阶段（让心理时钟真正 Tick 起来！）
+        avatar.apply_appraisal_and_tick(appraisal_data)
+
+        # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复
+        chat_payload = avatar.get_common_chat_payload(context, user_message)
+        chat_response = self.llm_client.chat.completions.create(
+            model=self.model_name, messages=chat_payload, temperature=0.4
+        )
+        return chat_response.choices[0].message.content.strip()
+
     def append_trait(self, key: str, trait_text: str) -> dict:
         """添加特质"""
         logger.debug(f"Appending {key} to trait text: {trait_text}...begin")
