@@ -99,64 +99,79 @@ class PsiAvatar:
         # 1. 通过大模型获取规范化的特质节点列表
         normalized_node = self.trait_factory.normalize_new_chunk(message_list)
 
-        # 统一安全提取大模型吐出的元数据参数字典
+        # 安全提取大模型吐出的元数据参数
         new_params = normalized_node.get("normalized_params")
         if not new_params:
             return "no_params_found"
 
-        # 确保处理的始终是单节点字典（如果是列表，则取第一个原子节点）
-        target_chunk = new_params[0] if isinstance(new_params, list) else new_params
+        # 🌟 1：统一将输入转化为列表，支持单节点和多节点的遍历
+        chunks_to_process = new_params if isinstance(new_params, list) else [new_params]
 
-        domain = target_chunk.get("domain")
-        tags = target_chunk.get("topic_tags", [])
-        entities = target_chunk.get("linked_entities", [])
-
-        # 🛡️ 容错控制：如果完全没有实体，不使用 entities[0]，退化为使用标签或放弃，防止越界
-        primary_entity = entities[0] if entities else "unspecified"
-        primary_tag = tags[0] if tags else "general"
-
-        # 🌟 核心修正：构建【复合主键】，彻底断绝不同领域、相同实体名引发的篡改冲突
-        # 格式示例："preference:diet_habit:ginger"
-        composite_key = f"{domain}:{primary_tag}:{primary_entity}"
-
-        # 2. 将当前的 self.trait_list 动态临时映射为字典，进行无缝去重结算
-        # 这样既不需要改动你整个项目的 self.trait_list 定义，又能享受 Map 的去重快感
+        # 2. 将当前的 self.trait_list 动态临时映射为字典（保持原有逻辑）
         trait_map = {}
         for t in self.trait_list:
             t_domain = t.get("domain")
-            t_tag = t.get("topic_tags", ["general"])[0] if t.get("topic_tags") else "general"
-            t_entity = t.get("linked_entities", ["unspecified"])[0] if t.get("linked_entities") else "unspecified"
-            k = f"{t_domain}:{t_tag}:{t_entity}"
-            trait_map[k] = t
+            t_tags = t.get("topic_tags", ["general"])
+            t_entities = t.get("linked_entities", ["unspecified"])
 
-        # 3. 执行合并与演进状态机逻辑
-        if composite_key in trait_map:
-            existing_trait = trait_map[composite_key]
-            logger.info(f"🔄 重复特质触发合并结算. Key: {composite_key}")
+            # 如果历史数据里已经是多实体，需要为每个实体映射对应的 key 引用
+            for tag in t_tags:
+                for entity in t_entities:
+                    k = f"{t_domain}:{tag}:{entity}"
+                    trait_map[k] = t
 
-            # 认知强化：权重取最大值
-            existing_trait['emotional_weight'] = max(
-                float(existing_trait.get('emotional_weight', 0.1)),
-                float(target_chunk.get('emotional_weight', 0.1))
-            )
+        # 🌟 2：遍历大模型识别出的所有特质节点
+        for target_chunk in chunks_to_process:
+            domain = target_chunk.get("domain")
+            tags = target_chunk.get("topic_tags", ["general"])
+            entities = target_chunk.get("linked_entities", ["unspecified"])
 
-            # 观念演进：如果行为模式（趋向或规避）反转了，盖戳记录 Trait Shift
-            if existing_trait.get('action_mode') != target_chunk.get('action_mode'):
-                logger.warning(f"⚠️ [特质异变激活] 虚拟人对 {primary_entity} 的态度发生实质性演进! "
-                               f"Before: {existing_trait.get('action_mode')} -> After: {target_chunk.get('action_mode')}")
-                existing_trait['action_mode'] = target_chunk.get('action_mode')
+            # 如果 tags 或 entities 为空列表，赋予默认值防止遍历失败
+            if not tags: tags = ["general"]
+            if not entities: entities = ["unspecified"]
 
-            # 频次累加
-            existing_trait['mention_count'] = existing_trait.get('mention_count', 1) + 1
-        else:
-            # 全新特质，打上初识计数，直接写入
-            logger.info(f"✨ 发现全新独立特质资产. Key: {composite_key}")
-            target_chunk['mention_count'] = 1
-            trait_map[composite_key] = target_chunk
+            # 🌟 3：遍历该特质关联的所有【标签】和【实体】，全面建立复合主键
+            for tag in tags:
+                for entity in entities:
+                    composite_key = f"{domain}:{tag}:{entity}"
 
-        # 4. 🌟 将融合去重后的字典，重新压回你原本的 self.trait_list 列表中
-        # 这确保了 export_avatar_state 和所有持久化/检索层代码【完全不需要修改任何一行】！
-        self.trait_list = list(trait_map.values())
+                    # 3. 执行合并与演进状态机逻辑
+                    if composite_key in trait_map:
+                        existing_trait = trait_map[composite_key]
+                        logger.info(f"🔄 重复特质触发合并结算. Key: {composite_key}")
+
+                        # 认知强化：权重取最大值
+                        existing_trait['emotional_weight'] = max(
+                            float(existing_trait.get('emotional_weight', 0.1)),
+                            float(target_chunk.get('emotional_weight', 0.1))
+                        )
+
+                        # 观念演进
+                        if existing_trait.get('action_mode') != target_chunk.get('action_mode'):
+                            logger.warning(f"⚠️ [特质异变激活] 虚拟人对 {entity} 的态度发生实质性演进! "
+                                           f"Before: {existing_trait.get('action_mode')} -> After: {target_chunk.get('action_mode')}")
+                            existing_trait['action_mode'] = target_chunk.get('action_mode')
+
+                        # 频次累加
+                        existing_trait['mention_count'] = existing_trait.get('mention_count', 1) + 1
+                    else:
+                        # 全新特质，打上初识计数，直接写入
+                        logger.info(f"✨ 发现全新独立特质资产. Key: {composite_key}")
+
+                        # 深拷贝或创建独立副本，避免多个 Key 引用同一个 dict 导致计数被错误翻倍
+                        import copy
+                        chunk_copy = copy.deepcopy(target_chunk)
+                        chunk_copy['mention_count'] = 1
+                        trait_map[composite_key] = chunk_copy
+
+        # 4. 将融合去重后的所有唯一特质对象，重新压回 self.trait_list
+        # 使用 dict.values() 并去重（因为多个 key 可能指向同一个 trait 对象）
+        unique_traits = []
+        for trait in trait_map.values():
+            if trait not in unique_traits:
+                unique_traits.append(trait)
+
+        self.trait_list = unique_traits
 
         logger.info(f"{self.character_name} 当前特质库总数(已重组): {len(self.trait_list)}")
         return "success"
