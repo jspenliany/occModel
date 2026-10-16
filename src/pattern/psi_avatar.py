@@ -68,11 +68,12 @@ class PsiAvatar:
 
     def get_common_chat_payload(self, context: str, user_input: str) -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
+        logger.debug(f"get_common_chat_payload  context: {context}  user_input: {user_input}")
         current_state = self.engine.get_current_avatar_state()
         system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list)
         logger.debug(f"get_response_payload system_prompt: {system_prompt}")
         self.message_history.add_user_message(user_input)
-
+        logger.debug(f"[{self.character_name} ({self.engine.p_layer.mbti})] Before: {current_state}")
         return [
             ChatCompletionSystemMessageParam(
                 role="system",
@@ -93,7 +94,7 @@ class PsiAvatar:
         logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
         message_list = self.get_trait_payload("", trait_text)
         if self.trait_factory is None:
-            logger.debug(f"append_new_trait message: {trait_text}")
+            logger.error(f"append_new_trait message: {trait_text} no trait factory")
             return trait_text
 
         # 1. 通过大模型获取规范化的特质节点列表

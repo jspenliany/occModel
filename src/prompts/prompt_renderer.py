@@ -101,9 +101,10 @@ class LLMPromptRenderer:
         #get traits
         trait_str = "None"
         if trait_list:
+            logger.debug(f"trait_list...size = {len(trait_list)}")
             sorted_traits = sorted(trait_list, key=lambda x: x.get("mention_count", 1), reverse=True)
             trait_str = "\n".join([self._format_trait_intensity(t) for t in sorted_traits])
-
+            logger.debug(f"Interpreting trait list: {trait_str}")
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
 
