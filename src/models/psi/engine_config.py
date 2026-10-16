@@ -2,22 +2,22 @@ from typing import Tuple, Dict, List
 from pydantic import BaseModel, Field
 
 class TraitRangeConfig(BaseModel):
-    # 基础 4 轴 8 种倾向的连续浮点数生成区间
-    E: Tuple[float, float] = Field(default=(0.7, 0.9), description="外倾型 (Extraversion) 区间")
-    I: Tuple[float, float] = Field(default=(0.1, 0.3), description="内倾型 (Introversion) 区间")
+    # 🌟 核心重构：将基础 4 轴 8 种 MBTI 倾向全部改用显式语义属性名，彻底剥离与 OCEAN 键名的缩写冲突
+    mbti_E: Tuple[float, float] = Field(default=(0.7, 0.9), description="外倾型 (Extraversion) 区间")
+    mbti_I: Tuple[float, float] = Field(default=(0.1, 0.3), description="内倾型 (Introversion) 区间")
 
-    N: Tuple[float, float] = Field(default=(0.7, 0.9), description="直觉型 (Openness) 区间")
-    S: Tuple[float, float] = Field(default=(0.1, 0.3), description="感觉型 (Closedness) 区间")
+    mbti_N: Tuple[float, float] = Field(default=(0.7, 0.9), description="直觉型 (Openness) 区间 - 💡 绝不再与神经质 Neuroticism 撞车")
+    mbti_S: Tuple[float, float] = Field(default=(0.1, 0.3), description="感觉型 (Closedness) 区间")
 
-    F: Tuple[float, float] = Field(default=(0.7, 0.9), description="情感型 (Agreeableness) 区间")
-    T: Tuple[float, float] = Field(default=(0.1, 0.3), description="思考型 (Disagreeableness) 区间")
+    mbti_F: Tuple[float, float] = Field(default=(0.7, 0.9), description="情感型 (Agreeableness) 区间")
+    mbti_T: Tuple[float, float] = Field(default=(0.1, 0.3), description="思考型 (Disagreeableness) 区间")
 
-    J: Tuple[float, float] = Field(default=(0.7, 0.9), description="独立型 (Conscientiousness) 区间")
-    P: Tuple[float, float] = Field(default=(0.1, 0.3), description="感知型 (Unconscientiousness) 区间")
+    mbti_J: Tuple[float, float] = Field(default=(0.7, 0.9), description="独立型 (Conscientiousness) 区间")
+    mbti_P: Tuple[float, float] = Field(default=(0.1, 0.3), description="感知型 (Unconscientiousness) 区间")
 
     # 身份尾缀区间
-    A_s: Tuple[float, float] = Field(default=(0.05, 0.25), description="自我肯定型 (Low Neuroticism) 区ain")
-    T_s: Tuple[float, float] = Field(default=(0.7, 0.95), description="动荡型 (High Neuroticism) 区间")
+    mbti_A: Tuple[float, float] = Field(default=(0.05, 0.25), description="自我肯定型 (Low Neuroticism) 区间")
+    mbti_T_suffix: Tuple[float, float] = Field(default=(0.7, 0.95), description="动荡型 (High Neuroticism) 区间")
 
     # 缺省兜底区间
     DEFAULT: Tuple[float, float] = Field(default=(0.4, 0.6), description="当MBTI字符非法时的中庸兜底区间")
@@ -86,7 +86,6 @@ class HardshipResilienceConfig(BaseModel):
     min_valence_active: float = Field(default=-0.1, description="维持高抗压的最低心情边界值")
     giving_up_suppression: float = Field(default=0.1, description="有信念时困境放弃意愿被压制的压制步长")
     valence_floor_protected: float = Field(default=-0.2, description="有护盾时保护的心情谷底低限")
-    # 各状态轴的上下限三元组/二元组边界配置（采用 Tuple 形式生成）
     valence_absolute_bounds: Tuple[float, float] = Field(
         default=(-1.0, 1.0), description="愉悦度 (Valence) 的全系统绝对物理区间"
     )
@@ -136,108 +135,47 @@ class PsychologicalStateConfig(BaseModel):
     recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
 
 class FactionWeightConfig(BaseModel):
-    """
-    【派系引力强度矩阵配置】
-    用于定义大五人格（OCEAN）中哪些特征的极化会引发该心理学派系的觉醒。
-    """
+    """【派系引力强度矩阵配置】"""
     trait_formula: List[Tuple[str, bool]] = Field(
         ...,
-        description=(
-            "用于连乘计算派系强度的特征元组列表。 "
-            "格式: (特质名 'O'/'C'/'E'/'A'/'N', 是否执行 1.0 - trait 的反转计算)。"
-            "连乘机制使得所有特征同时极化时，该派系的话语权会发生指数级暴击。"
-        )
+        description="格式: (大五人格标准特质名 'O'/'C'/'E'/'A'/'N', 是否执行 1.0 - trait 的反转计算)。"
     )
-
 
 class DistortionEffectConfig(BaseModel):
-    """
-    【事件认知扭曲/暴击系数配置】
-    定义不同的核心心理学派系在遭遇“好事”或“坏事”时，在主观层面上对伤害或收益的放大/缩小系数。
-    """
-    pessimist: float = Field(
-        ...,
-        description="多疑悲观派（Pessimist）的扭曲系数。原硬编码中：好事为 0.4 倍缩水，坏事为 2.0 倍放大。"
-    )
-    optimist: float = Field(
-        ...,
-        description="盲目乐天派（Optimist）的扭曲系数。原硬编码中：好事为 1.5 倍爆放大，坏事为 0.2 倍稀释钝化。"
-    )
-    detachment: float = Field(
-        ...,
-        description="冷漠孤僻派（Detachment）的扭曲系数。原硬编码中：无论好事坏事，强行稀释为 0.1 倍，表现为极度麻木。"
-    )
-
+    """【事件认知扭曲/暴击系数配置】"""
+    pessimist: float = Field(..., description="多疑悲观派（Pessimist）的扭曲系数。")
+    optimist: float = Field(..., description="盲目乐天派（Optimist）的扭曲系数。")
+    detachment: float = Field(..., description="冷漠孤僻派（Detachment）的扭曲系数。")
 
 class AttributionBiasConfig(BaseModel):
-    """
-    【归因偏误与责任内化配置】
-    处理当遭遇负面刺激时，个体的心理防御机制如何扭曲责任归属。
-    """
-    victim_blame_multiplier: float = Field(
-        default=1.5,
-        description="偏执受害者（Victim）倾向越强，越倾向于无中生有地指责外界，将坏事转化为外部责备（Blameworthiness）的乘数。"
-    )
-    narcissist_self_shame_multiplier: float = Field(
-        default=1.2,
-        description="完美主义自恋派（Narcissist）在坏事发生时，疯狂引发内心自我羞耻（Self-Blameworthiness）的内化乘数。"
-    )
-    narcissist_external_blame_multiplier: float = Field(
-        default=0.8,
-        description="完美主义自恋派出于自尊心受挫、本能产生反向防御攻击他人（外部责备）的乘数。"
-    )
-
+    """【归因偏误与责任内化配置】"""
+    victim_blame_multiplier: float = Field(default=1.5, description="外部责备乘数")
+    narcissist_self_shame_multiplier: float = Field(default=1.2, description="自我羞耻内化乘数")
+    narcissist_external_blame_multiplier: float = Field(default=0.8, description="本能反向防御他人乘数")
 
 class CognitiveFilterConfig(BaseModel):
-    """
-    【全局认知滤网声明式配置中心】
-    彻底干掉底层 OCC 结算引擎中的硬编码和魔术数字，实现千人千面的动态性格认知过滤器。
-    """
-
-    # 1. 五大派系引力公式默认配置
+    """【全局认知滤网声明式配置中心】"""
     factions: Dict[str, FactionWeightConfig] = Field(
         default_factory=lambda: {
-            # 多疑悲观派: 神经质高(N) & 宜人性低(1-A) & 外倾性低(1-E)
+            # 🌟 这里的 "N" 已经完全回归心理学正统：代表大五人格的 Neuroticism (神经质/焦虑不稳定性)
             "pessimist": FactionWeightConfig(trait_formula=[("N", False), ("A", True), ("E", True)]),
-            # 盲目乐天派: 外倾性高(E) & 宜人性高(A) & 神经质低(1-N)
             "optimist": FactionWeightConfig(trait_formula=[("E", False), ("A", False), ("N", True)]),
-            # 偏执受害者: 神经质高(N) & 宜人性低(1-A) & 开放性低(1-O)
             "victim": FactionWeightConfig(trait_formula=[("N", False), ("A", True), ("O", True)]),
-            # 冷漠孤僻派: 外倾性低(1-E) & 神经质低(1-N) & 宜人性低(1-A)
             "detachment": FactionWeightConfig(trait_formula=[("E", True), ("N", True), ("A", True)]),
-            # 自恋完美派: 尽责性高(C) & 宜人性低(1-A) & 神经质高(N)
             "narcissist": FactionWeightConfig(trait_formula=[("C", False), ("A", True), ("N", False)]),
         },
         description="系统内置的五大核心精神派系特征连乘链公式配置。"
     )
 
-    # 2. 好事发生时的内化扭曲参数 (raw_desirability > 0)
     good_event_distortion: DistortionEffectConfig = Field(
-        default_factory=lambda: DistortionEffectConfig(pessimist=0.4, optimist=1.5, detachment=0.1),
-        description="好事（Desirability > 0）输入时，悲观派、乐天派和冷漠派的话语权放大/缩小系数。"
+        default_factory=lambda: DistortionEffectConfig(pessimist=0.4, optimist=1.5, detachment=0.1)
     )
-
-    # 3. 坏事发生时的内化扭曲参数 (raw_desirability < 0)
     bad_event_distortion: DistortionEffectConfig = Field(
-        default_factory=lambda: DistortionEffectConfig(pessimist=2.0, optimist=0.2, detachment=0.1),
-        description="坏事（Desirability < 0）输入时，悲观派、乐天派和冷漠派的伤害放大/钝化稀释系数。"
+        default_factory=lambda: DistortionEffectConfig(pessimist=2.0, optimist=0.2, detachment=0.1)
     )
-
-    # 4. 归因偏误乘数配置
-    attribution_bias: AttributionBiasConfig = Field(
-        default_factory=AttributionBiasConfig,
-        description="坏事发生时，受害者派系与自恋完美派系引发的反向甩锅和自责内省乘数配置。"
-    )
-
-    # 5. 外部非议与指责的特殊过滤乘数 (raw_blameworthiness < 0)
-    criticism_pessimist_multiplier: float = Field(
-        default=2.0,
-        description="被人非议或严厉责备时，多疑悲观派双倍放大他人指责和敌意的系数。"
-    )
-    criticism_detachment_multiplier: float = Field(
-        default=0.1,
-        description="被人非议或严厉责备时，冷漠孤僻派强行屏蔽、降维抹平情绪伤害的降噪系数。"
-    )
+    attribution_bias: AttributionBiasConfig = Field(default_factory=AttributionBiasConfig)
+    criticism_pessimist_multiplier: float = Field(default=2.0)
+    criticism_detachment_multiplier: float = Field(default=0.1)
 
 class EngineConfig(BaseModel):
     """全局数字人情感引擎声明式配置中心"""
