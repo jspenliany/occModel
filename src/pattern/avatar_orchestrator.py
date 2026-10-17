@@ -3,6 +3,18 @@ from src.models.psi.trait import TraitNormalizer
 from src.pattern.psi_avatar import PsiAvatar
 from src.logger_singleton import logger
 from src.utils.util_json import extract_and_parse_json
+from datetime import datetime
+
+class DateTimeEncoder(json.JSONEncoder):
+    """
+    自定义的 JSON 编码器，专门拦截并自动序列化 datetime 对象。
+    如果遭遇常规数据则正常移交系统底层处理。
+    """
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            # 序列化为 ISO 格式字符串，例如: "2026-10-18T06:52:09+08:00"
+            return obj.isoformat()
+        return super().default(obj)
 
 class AvatarOrchestrator:
     """管理多个数字生命，统一驱动流水线"""
@@ -104,7 +116,7 @@ class AvatarOrchestrator:
                 file_path = os.path.join(self.storage_dir, f"{key}_psyche.json")
                 logger.debug(f"Saving archive for {key}: {archive_data}")
                 with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(archive_data, f, ensure_ascii=False, indent=2)
+                    json.dump(archive_data, f, ensure_ascii=False, indent=2, cls=DateTimeEncoder)
 
                 logger.info(f"Successfully saved persistence file for avatar key: {key}")
             except Exception as e:
