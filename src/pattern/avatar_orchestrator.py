@@ -102,7 +102,7 @@ class AvatarOrchestrator:
             try:
                 archive_data = avatar.export_avatar_state()
                 file_path = os.path.join(self.storage_dir, f"{key}_psyche.json")
-
+                logger.debug(f"Saving archive for {key}: {archive_data}")
                 with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump(archive_data, f, ensure_ascii=False, indent=2)
 

@@ -180,7 +180,6 @@ class PsiAvatar:
     def export_avatar_state(self) -> dict:
         """将当前智能体的所有运行时状态导出为可持久化的字典"""
         # 1. 获取 PSI 核心引擎的实时扁平状态
-        current_psi_state = self.engine.get_current_avatar_state()
         engine_snapshot = self.engine.to_dict()
 
         # 2. 组装完整的持久化结构
