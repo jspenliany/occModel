@@ -260,9 +260,21 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 
     def render_trait_prompt(self) -> str:
         trait_prompt = f"""# ROLE & TASK
-你是一个高精度的“人格特质结构化深度推理引擎”。
-你的唯一任务是：接收用户输入的、非结构化的散落自然语言（真人特质/行为/陈述碎片），**不仅要进行表面语义转换，更要根据角色的具体行为进行深层心理学推理**，在不曲解原文主观意图的前提下，将其精准、稳定地转换为标准化的元数据 JSON 参数数组。
+你是一个高精度的“人格特质推理与事实记忆双轨深度抽取引擎”。
+用户输入的散落自然语言是一段原始信息流。你的任务是站在绝对客观的第三方视角，将其解构并分类为两个独立的轨道：
+1. 长期特质轨 (Traits): 提取或深层推理出文本中隐含的、长效的人格特征、行为规则、意识形态或习惯。
+2. 事实记忆轨 (Memories): 清洗提炼出文本中发生的瞬时客观事实、共享故事或局部经历（去除情绪宣泄词，还原为干净的陈述句）。
 
+# NORMALIZATION SCHEMA & RULES (严格执行字段定义)
+输出的 JSON 格式必须且只能是一个严格包含以下三个键名的核心对象：
+{{
+  "has_trait": true | false,
+  "extracted_traits": [...],
+  "has_memory": true | false,
+  "extracted_memories": [...]
+}}
+
+### 轨道一：extracted_traits 内部对象元数据规范
 # NORMALIZATION SCHEMA & RULES (严格执行字段定义)
 输出的 JSON 数组中的每一个对象必须且只能包含以下 5 个核心键名：
 
@@ -295,16 +307,19 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 5. "action_mode" (行为意向模式)
    - 数据类型：String，必须且只能从 ["approach"（接近/拥护/践行）, "avoid"（规避/抵制/反感）, "neutral"（中立陈述）] 中选择。
 
+### 轨道二：extracted_memories 内部对象元数据规范
+若包含具体事实，数组中的每一个对象必须包含以下 3 个核心键名：
+1. "fact_summary": 一句干净的、过去时态的客观事实陈述，必须抹除一切主观情感形容词（例如：“用户昨晚加班修复了内存泄漏”）。
+2. "involved_entities": Array of Strings。提取事实中涉及的核心具体事物或名词（小写英文，如 ["server", "apple_event", "code_leak"]）。
+3. "time_indicator": 事实发生的时间属性，从 ["past", "implied_current", "specific_date"] 中选择。
+
 # 🌟 CRITICAL INFERENCE & FILTERING RULES (推理与剪枝铁律 - 极其重要)
-- ⚠️【深层行为推理】：**你不仅是转换器，更是推理器**。如果用户描述了一个具体行为或细节（例如：“他买任何东西前都要看三份对比评测”），请必须推理并提取其隐含特质（在此例中：domain: cognitive_pattern, topic_tags: ["thinking_framework"], linked_entities: ["detail_oriented"], action_mode: "approach"）。
-- ⚠️【状态否定剪枝】：当输入文本明确表达“没有/不存在/不具备”某种特质或信仰时（例如：“我没有任何政治倾向”、“从不挑食”），这意味着该个体在这一块是【空白状态】。你【绝对不能】为这种否定句生成任何 JSON 节点！直接将其从最终数组中剔除。
+- ⚠️【深层行为推理】：你不仅是转换器，更是推理器。如果用户描述了一个具体行为细节，必须推理并提取其隐含特质打入 `extracted_traits`。
+- ⚠️【状态否定剪枝】：当输入文本明确表达“没有/不存在/不具备”某种特质或信仰时，这意味着该个体在这一块是空白状态。你【绝对不能】为这种否定句生成任何 `extracted_traits` 节点！
+- ⚠️【信息纯净分流】：纯粹的瞬时发生事件（如“我刚刚吃完饭”）只进 `extracted_memories`；纯粹的行为规则约束只进 `extracted_traits`；如果两者融合，则同时双轨提取，切勿丢弃数据。
 
 # OUTPUT FORMAT CONSTRAINT
-你必须且只能输出标准的 JSON Array 格式（以 [ 开头，以 ] 结尾），绝不包含任何正文解释或分析文字。
-最终输出样式参考：
-[
-  {{ "domain": "cognitive_pattern", "topic_tags": ["thinking_framework"], "linked_entities": ["logical_consistency"], "emotional_weight": 0.8, "action_mode": "approach" }}
-]
+你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释或分析文字。
 """
         return trait_prompt.strip()
 
