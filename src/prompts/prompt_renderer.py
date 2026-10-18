@@ -307,11 +307,20 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 5. "action_mode" (行为意向模式)
    - 数据类型：String，必须且只能从 ["approach"（接近/拥护/践行）, "avoid"（规避/抵制/反感）, "neutral"（中立陈述）] 中选择。
 
-### 轨道二：extracted_memories 内部对象元数据规范
-若包含具体事实，数组中的每一个对象必须包含以下 3 个核心键名：
-1. "fact_summary": 一句干净的、过去时态的客观事实陈述，必须抹除一切主观情感形容词（例如：“用户昨晚加班修复了内存泄漏”）。
-2. "involved_entities": Array of Strings。提取事实中涉及的核心具体事物或名词（小写英文，如 ["server", "apple_event", "code_leak"]）。
-3. "time_indicator": 事实发生的时间属性，从 ["past", "implied_current", "specific_date"] 中选择。
+### 轨道二：extracted_memories 内部对象元数据精细化规范
+若包含具体事实或经历，数组中的每一个对象必须包含以下 6 个核心键名（禁止扁平化合并）：
+
+1. "fact_summary": 一句干净的、过去时态的客观事实陈述。必须抹除一切主观情感形容词（例如：“用户昨晚因修复代码泄漏而加班”）。
+2. "memory_type": 必须且只能从以下 4 个固定枚举值中选择一个：
+   - "episodic_experiential": 角色自身亲身参与、经历的实际事件（如：我们一起去吃过饭、我昨晚写了代码）。
+   - "episodic_observed": 角色在外界目击的、与自身无直接利害关系的第三方正在发生的事（如：路上看到有人吵架、看到苹果发了新手机）。
+   - "subconscious_dream": 角色的梦境、潜意识幻觉、虚构的幻觉场景。
+   - "semantic_hearsay": 听别人说的信息片段、传闻、八卦、新闻报道、第三方转述的碎片情报。
+3. "credibility": Float 范围 [0.0 到 1.0]，代表该记忆的现实可靠性。
+   - 规则：亲身经历或目击赋予 1.0；听到的传闻/八卦根据描述赋予 0.4 - 0.7；梦境或幻觉统一赋予 0.1。
+4. "perspective_focus": 必须且只能从 ["first_person"（以我为主体）, "user_centric"（以用户为主体）, "third_party"（第三方世界）] 中选择。
+5. "involved_entities": Array of Strings。提取事实中涉及的核心具体事物或名词（小写英文，如 ["server", "apple_event", "code_leak"]）。
+6. "time_indicator": 从 ["past"（过去的经历/历史）, "implied_current"（当前正在发生/刚刚发生）, "future_planned"（计划或预期未来要发生的）] 中选择。
 
 # 🌟 CRITICAL INFERENCE & FILTERING RULES (推理与剪枝铁律 - 极其重要)
 - ⚠️【深层行为推理】：你不仅是转换器，更是推理器。如果用户描述了一个具体行为细节，必须推理并提取其隐含特质打入 `extracted_traits`。
