@@ -4,6 +4,7 @@ from src.pattern.psi_avatar import PsiAvatar
 from src.logger_singleton import logger
 from src.utils.util_json import extract_and_parse_json
 from datetime import datetime
+import zoneinfo
 
 class DateTimeEncoder(json.JSONEncoder):
     """
@@ -122,36 +123,75 @@ class AvatarOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to save archive for {key}: {e}")
 
-    def load_avatar_from_storage(self, key: str, lore_factory) -> bool:
-        """从本地磁盘读取数据，动态重建或恢复某个特定的虚拟人"""
-        file_path = os.path.join(self.storage_dir, f"{key}_psyche.json")
-        if not os.path.exists(file_path):
-            logger.warning(f"No persistence file found for key: {key} at {file_path}")
-            return False
-
+    def load_avatar_state(self, archive_data: dict) -> None:
+        """
+        Deep re-hydration of the digital soul's memory state graph.
+        Defensively parses serialised ISO string timestamps back into timezone-aware datetimes.
+        """
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                archive_data = json.load(f)
+            logger.info(f"Initiating state hydration graph for avatar: {self.get_charactor_name()}")
 
-            metadata = archive_data.get("metadata", {})
+            # 1. Recover core operational profiles & system structural layers
+            # Assuming your existing bridge instantiation or sync looks like this:
+            if "psi_live_state" in archive_data:
+                # If your PSI3DGlassBridge has force_sync_state implemented:
+                if hasattr(self, "psi_engine") and self.psi_engine:
+                    self.psi_engine.force_sync_state(archive_data["psi_live_state"])
+                else:
+                    logger.error(f"psi_engine not found in psi_live_state: {archive_data}")
+            else:
+                logger.error(f"psi_live_state not found in archive_data: {archive_data}")
 
-            # 1. 如果运行时实例不存在，利用元数据执行“冷启动”实例化
-            if key not in self.avatars:
-                logger.info(f"Cold starting avatar instance for key: {key} ...")
-                from src.pattern.psi_avatar import PsiAvatar
-                new_avatar = PsiAvatar(
-                    character_name=metadata.get("character_name"),
-                    mbti=metadata.get("mbti"),
-                    profession=metadata.get("profession"),
-                    lore_factory=lore_factory,
-                    trait_factory=self.trait_normalizer
-                )
-                self.register_avatar(key, new_avatar)
+            # 2. Re-hydrate banks
+            if "trait_memory_bank" in archive_data:
+                self.trait_memory_bank = archive_data["trait_memory_bank"]
+            else:
+                logger.error(f"trait_memory_bank not found in archive_data: {archive_data}")
+            if "core_memory_bank" in archive_data:
+                self.core_memory_bank = archive_data["core_memory_bank"]
+            else:
+                logger.error(f"core_memory_bank not found in archive_data: {archive_data}")
 
-            # 2. 状态强行灌入（恢复内存与动态心情）
-            self.avatars[key].load_avatar_state(archive_data)
-            return True
+            # 3. 🌟 CORE PATCH: Defensive Chat History Timeline Re-hydration
+            raw_history = archive_data.get("chat_history", [])
+            hydrated_history = []
+
+            for turn in raw_history:
+                # Defensively copy the dictionary payload to avoid modifying unexpected references
+                clean_turn = {k: v for k, v in turn.items()}
+
+                timestamp_raw = clean_turn.get("timestamp")
+
+                if timestamp_raw:
+                    if isinstance(timestamp_raw, str):
+                        try:
+                            # 1. Standard ISO-8601 parser (handles "+08:00" offsets automatically)
+                            clean_turn["timestamp"] = datetime.fromisoformat(timestamp_raw)
+                        except ValueError:
+                            try:
+                                # 2. Fallback parser for legacy formats missing explicit standard structures
+                                clean_turn["timestamp"] = datetime.strptime(timestamp_raw, "%Y-%m-%d %H:%M:%S")
+                                # Fall back safely to target system timezone configuration if offset is completely stripped
+                                clean_turn["timestamp"] = clean_turn["timestamp"].replace(
+                                    tzinfo=zoneinfo.ZoneInfo("Asia/Shanghai")
+                                )
+                            except Exception as inner_e:
+                                logger.error(f"Failed parsing string timestamp '{timestamp_raw}': {inner_e}")
+                                # Secondary safety net: fallback directly to system execution wall clock time
+                                clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+                    elif isinstance(timestamp_raw, datetime):
+                        # Safeguard in case payload already contains runtime objects
+                        pass
+                else:
+                    # Tertiary safety net if data keys are corrupted or absent
+                    clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+
+                hydrated_history.append(clean_turn)
+
+            # Assign fully verified timeline graph back to runtime memory context
+            self.chat_history = hydrated_history
+            logger.info(f"Successfully re-hydrated {len(hydrated_history)} historical turns into state memory.")
 
         except Exception as e:
-            logger.error(f"Critical error during loading avatar from database/file: {e}")
-            return False
+            logger.critical(f"Fatal error during cold re-hydration of agent state data: {e}")
+            raise e
