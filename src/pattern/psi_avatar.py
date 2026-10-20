@@ -1,5 +1,6 @@
 from src.models.psi.bridge import PSI3DGlassBridge
 from src.logger_singleton import logger
+from src.models.psi.trait import NodeDict
 from src.prompts.prompt_renderer import LLMPromptRenderer
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
@@ -90,23 +91,13 @@ class PsiAvatar:
     def get_profession(self) -> str:
         return self.profession
 
-    def append_new_trait(self, trait_text: str) -> str:
-        logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
-        message_list = self.get_trait_payload("", trait_text)
-        if self.trait_factory is None:
-            logger.error(f"append_new_trait message: {trait_text} no trait factory")
-            return trait_text
+    def update_trait(self, trait_data: list, update_time: str) -> str:
 
-        # 1. 通过大模型获取规范化的特质节点列表
-        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=0.4)
-
-        # 安全提取大模型吐出的元数据参数
-        new_params = trait_node.get("normalized_params")
-        if not new_params:
-            return "no_params_found"
+        if not trait_data:
+            return "no_trait_found"
 
         # 🌟 1：统一将输入转化为列表，支持单节点和多节点的遍历
-        chunks_to_process = new_params if isinstance(new_params, list) else [new_params]
+        chunks_to_process = trait_data if isinstance(trait_data, list) else [trait_data]
 
         # 2. 将当前的 self.trait_list 动态临时映射为字典（保持原有逻辑）
         trait_map = {}
@@ -175,6 +166,33 @@ class PsiAvatar:
         self.trait_list = unique_traits
 
         logger.info(f"{self.character_name} 当前特质库总数(已重组): {len(self.trait_list)}")
+        return "new_trait_found"
+
+    def update_memory(self, memory_data: list, update_time: str) -> str:
+        if not memory_data:
+            return "no_memory_found"
+
+        # 🌟 1：统一将输入转化为列表，支持单节点和多节点的遍历
+        chunks_to_process = memory_data if isinstance(memory_data, list) else [memory_data]
+
+        return "new_memory_found"
+
+    def append_new_trait(self, trait_text: str) -> str:
+        logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
+        message_list = self.get_trait_payload("", trait_text)
+        if self.trait_factory is None:
+            logger.error(f"append_new_trait message: {trait_text} no trait factory")
+            return trait_text
+
+        # 1. 通过大模型获取规范化的特质节点列表
+        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=0.4)
+        # 安全提取大模型吐出的元数据参数
+        new_trait = trait_node.get("normalized_params")
+        trait_time = trait_node.get("timestamp")
+        new_memory = trait_node.get("normalized_params")
+        memory_time = trait_node.get("timestamp")
+        self.update_trait(new_trait,trait_time)
+        self.update_memory(new_memory,memory_time)
         return "success"
 
     def export_avatar_state(self) -> dict:
