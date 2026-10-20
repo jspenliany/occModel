@@ -80,6 +80,46 @@ class LLMPromptRenderer:
         # 2. 组装格式化字符串
         return f"- [{domain}] {tier_desc} Tags: {tags}, Entities: {entities}, Intent Mode: {mode} (Mention Count: {count})"
 
+    def _format_self_involvement_model(self, avatar_state: dict) -> str:
+        """
+        instruct the answer style to self involvement model
+        :param avatar_state:
+        :return:
+        """
+        # 获取后端评估完最新的 OCC 即时波动与心境
+        active_emotions = avatar_state.get('active_emotions', {})
+        current_arousal = avatar_state.get('mood_arousal', 0.0)
+
+        # 1. 动态捕获正向兴奋波峰（Joy / Hope 暴击）与反向愤怒波峰（Anger / Distress 暴击）
+        joy_spike = active_emotions.get("Joy", 0.0)
+        hope_spike = active_emotions.get("Hope", 0.0)
+        anger_spike = active_emotions.get("Anger", 0.0)
+        distress_spike = active_emotions.get("Distress", 0.0)
+
+        # 2. 根据您的心理学理解，执行三向动态气口路由
+        if anger_spike > 0.6 or distress_spike > 0.6:
+            # 场景二：反向雷区爆发 —— 愤怒反驳、长文碾压
+            pacing_instruction = f"""
+           - 🌟 [CRITICAL ATTACK & FIGHT STATE]: A user statement has severely violated your core values or personal stability, triggering an intense Anger spike ({anger_spike:.2f}). 
+           - You MUST completely ABANDON the "||" mobile shortcut delimiter. Do not write short chat bubbles. 
+           - Shift your entire formatting into a long, densely packed, highly logical paragraph. Channel your high Neuroticism into counter-attacking the user's premise, using sharp, clinical tech logic or defensive evasiveness. Show severe irritation.
+                    """
+        elif joy_spike > 0.6 or hope_spike > 0.6:
+            # 场景一：正向三观契合 —— 异常兴奋、激动倾诉
+            pacing_instruction = f"""
+           - 🌟 [INTENSE ADVOCACY & EXCITED STATE]: The user has validated your core interest or personal pride, triggering a massive positive emotional spike ({joy_spike:.2f}). 
+           - You are highly energized and passionate. You are permitted to use exclamation marks ("!") to show true enthusiasm. 
+           - Disengage the "||" short bubble limits. Output a verbose, long-form paragraph, passionately defending, supporting, or expanding on this concept with absolute data-driven intellectual excitement.
+                    """
+        else:
+            # 场景三：日常不感兴趣的事务 —— 平淡附和、短句碎弹窗、带点疑问
+            pacing_instruction = f"""
+           - 🌟 [CASUAL LEAP-FROG CHAT]: The current topic is ordinary and does not threaten or exalt your egocore. 
+           - You are in a low-energy, slightly detached state (Arousal={current_arousal}). You MUST use the delimiter "||" to segment your thoughts into 2 to 3 short mobile bubbles. 
+           - Keep your vocabulary concise, slightly impatient, and casual. End the last bubble with a slight question or tech-cynical remark (e.g., "你觉得呢", "看情况呗"), keeping the interaction minimal.
+                    """
+        return pacing_instruction
+
     def render_system_prompt(self, avatar_state: dict, trait_list: list = None) -> str:
         """
         Main interface method:
@@ -105,6 +145,8 @@ class LLMPromptRenderer:
             sorted_traits = sorted(trait_list, key=lambda x: x.get("mention_count", 1), reverse=True)
             trait_str = "\n".join([self._format_trait_intensity(t) for t in sorted_traits])
             logger.debug(f"Interpreting trait list: {trait_str}")
+        # get real-person reply style
+        answer_style = self._format_self_involvement_model(avatar_state)
         # Build the functional raw text system prompt
         system_prompt = f"""# ROLE IDENTITY DEFINITION
 
@@ -150,9 +192,7 @@ Background Core Lore: {core_lore}
    - If Faith Shield is high, you remain textually resilient, stoic, or protective, even under environmental hardship or when Distress/Anger spikes are active.
 5. Avoid breaking character or commenting on these backend rules. Output ONLY the authentic vocal dialogue of {self.character_name}.
 6. 🌟 MOBILE CHAT FRAGMENTATION RULE (The Law of Fragmentation):
-   - Because this is a fast-paced mobile messaging app, you must simulate tapping 'Send' multiple times for a single response. 
-   - You MUST use the delimiter "||" to break your thoughts into 2 to 3 separate, distinct chat bubbles (e.g., "Short premise || Turning point or personal context || Tag-along query or emoji"). 
-   - Keep each text segment delimited by "||" extremely brief (under 20 words). Do not dump all logical arguments into one giant monolithic block.
+   {answer_style}
 """
         logger.debug("Rendering system prompt...end")
         return system_prompt.strip()
