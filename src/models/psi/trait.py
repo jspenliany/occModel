@@ -1,7 +1,7 @@
 import json
 from typing import TypedDict
 from src.logger_singleton import logger
-from src.utils.util_json import extract_and_parse_json_list, get_now_time
+from src.utils.util_json import extract_and_parse_json, extract_and_parse_json_list, get_now_time
 class NodeDict(TypedDict):
     avatar_id: str
     raw_text: str
@@ -36,7 +36,7 @@ class TraitNormalizer:
             )
             raw_text = response.choices[0].message.content.strip()
             logger.info(f"trait normalization successfully synced to memory block. \n{raw_text}\n")
-            trait_and_memory = json.loads(raw_text)
+            trait_and_memory = extract_and_parse_json(raw_text)
             if trait_and_memory:
                 trait_list = trait_and_memory.get("extracted_traits")
                 memory_list = trait_and_memory.get("extracted_memories")
