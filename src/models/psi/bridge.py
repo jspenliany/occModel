@@ -28,11 +28,11 @@ class PSI3DGlassBridge:
         """控制环境是否属于困境"""
         self.in_hardship_flag = flag
 
-    def receive_user_stimulus(self, appraisal_data: dict):
+    def receive_user_stimulus(self, appraisal_data: dict, speaker_id: str = "unknown_stranger"):
         """外部事件输入触发"""
         logger.debug("receive_user_stimulus......begin")
         # 第一步：计算即时爆发（内部已挂载观念强化滤网）
-        self.e_layer.calculate_occ_spikes(appraisal_data, self.p_layer, self.m_layer)
+        self.e_layer.calculate_occ_spikes(appraisal_data, self.p_layer, self.m_layer, speaker_id=speaker_id)
 
         # 第二步：【行为->习惯->观念的自循环】
         # 🌟 优化：无论是愤怒(Anger)还是深深的无力悲伤(Distress)突破 0.5，都会高频累积为黑化习惯
@@ -75,7 +75,8 @@ class PSI3DGlassBridge:
         self.m_layer.giving_up_rate = 0.0  # 顿悟瞬间清除一切放弃和摆烂心态
         logger.debug("trigger_paradigm_shift_event...end")
 
-    def get_current_avatar_state(self) -> dict:
+    def get_current_avatar_state(self, speaker_id: str = "unknown_stranger") -> dict:
+        active_rel = self.p_layer.config.social_graph.get_relation(speaker_id)
         return {
             "profession": self.profession,
             "mbti": self.p_layer.mbti,
@@ -85,7 +86,13 @@ class PSI3DGlassBridge:
             "competence": round(self.m_layer.competence, 2),
             "giving_up_rate": round(self.m_layer.giving_up_rate, 2),
             "faith_shield": round(self.m_layer.faith_shield, 2),
-            "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0}
+            "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0},
+            "active_relationship": {
+                "relation_type": active_rel.relation_type,
+                "intimacy": active_rel.intimacy_baseline,
+                "power_dynamic": active_rel.power_dynamic,
+                "social_contract_lore": active_rel.social_contract_lore
+            }
         }
     # 追加入 PSI3DGlassBridge中，实现全状态序列化
     def to_dict(self) -> dict:

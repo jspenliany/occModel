@@ -41,9 +41,15 @@ class PersonalityLayer:
 
     # 追加入 personality.py 的 PersonalityLayer 类中
     def to_dict(self) -> dict:
+        config_data = (
+            self.config.model_dump()
+            if hasattr(self.config, "model_dump")
+            else self.config.dict()
+        )
         return {
             "mbti": self.mbti,
-            "ocean": self.ocean
+            "ocean": self.ocean,
+            "config": config_data  # 🌟 完整保留运行时的动态配置（含 social_graph 等）
         }
 
     @classmethod
@@ -52,4 +58,13 @@ class PersonalityLayer:
         instance = cls.__new__(cls)
         instance.mbti = data["mbti"]
         instance.ocean = data["ocean"]
+        if "config" in data and data["config"]:
+            instance.config = (
+                EngineConfig.model_validate(data["config"])
+                if hasattr(EngineConfig, "model_validate")
+                else EngineConfig(**data["config"])
+            )
+        else:
+            instance.config = EngineConfig()
+
         return instance

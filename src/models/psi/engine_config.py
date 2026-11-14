@@ -177,9 +177,56 @@ class CognitiveFilterConfig(BaseModel):
     criticism_pessimist_multiplier: float = Field(default=2.0)
     criticism_detachment_multiplier: float = Field(default=0.1)
 
+
+class RelationalProfile(BaseModel):
+    """独立的人际关系契约配置（与特质、记忆平级隔离）"""
+    target_user_id: str = Field(..., description="对话者ID")
+    relation_type: str = Field(...,
+                               description="关系类型，如: 'spouse'(夫妻), 'parent'(父母), 'child'(子女), 'colleague'(同事), 'stranger'(陌生人)")
+    intimacy_baseline: float = Field(default=0.8,
+                                     description="亲密度基准 [-1.0, 1.0]，直接映射到 OCC 的 other_relationship")
+    emotional_vulnerability: float = Field(default=1.5,
+                                           description="情感易伤乘数：越亲近的人批评你，负面情绪放大倍数越高")
+    power_dynamic: str = Field(default="equal",
+                               description="权力结构: 'equal'(平等), 'superior'(长辈/权威), 'subordinate'(晚辈)")
+    social_contract_lore: str = Field(..., description="这段关系的专属行为契约描述")
+
+
+class SocialGraphConfig(BaseModel):
+    """全局社交关系图谱管理中心"""
+    # 1. 存储所有已知交互对象的关系字典，Key 为 target_user_id
+    relationships: Dict[str, RelationalProfile] = Field(
+        default_factory=dict,
+        description="按用户ID索引的人际关系契约字典"
+    )
+
+    # 2. 兜底默认配置：当未注册的陌生人发消息时，自动返回此安全契约，防止 KeyError
+    default_stranger_profile: RelationalProfile = Field(
+        default_factory=lambda: RelationalProfile(
+            target_user_id="unknown_stranger",
+            relation_type="stranger",
+            intimacy_baseline=0.0,
+            emotional_vulnerability=1.0,
+            power_dynamic="equal",
+            social_contract_lore="普通社交关系或陌生人。保持正常的社交边界、礼貌距离或默认防备。"
+        ),
+        description="未在图谱中登记的默认关系兜底配置"
+    )
+
+    def get_relation(self, user_id: str) -> RelationalProfile:
+        """安全获取指定对话者的关系契约，找不到时无缝降级为陌生人"""
+        return self.relationships.get(user_id, self.default_stranger_profile)
+
+    def register_relation(self, profile: RelationalProfile) -> None:
+        """动态注册或更新某段人际关系"""
+        self.relationships[profile.target_user_id] = profile
+
+
 class EngineConfig(BaseModel):
     """全局数字人情感引擎声明式配置中心"""
     mbti_ranges: TraitRangeConfig = Field(default_factory=TraitRangeConfig)
     occ_engine: OccEngineConfig = Field(default_factory=OccEngineConfig)
     psychological_state: PsychologicalStateConfig = Field(default_factory=PsychologicalStateConfig)
     cognitive_filter: CognitiveFilterConfig = Field(default_factory=CognitiveFilterConfig)
+    #将社交关系图谱接入全局配置中心
+    social_graph: SocialGraphConfig = Field(default_factory=SocialGraphConfig)

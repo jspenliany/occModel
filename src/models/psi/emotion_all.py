@@ -21,12 +21,14 @@ class OCCEmotionLayer:
         for emo in self.active_emotions:
             self.active_emotions[emo] = max(0.0, self.active_emotions[emo] - self.decay_rate)
 
-    def calculate_occ_spikes(self, raw_appraisal: dict, personality_layer, mood_layer):
+    def calculate_occ_spikes(self, raw_appraisal: dict, personality_layer, mood_layer, speaker_id: str = "unknown_stranger"):
         """
         完备即时情感层结算中心
         🌟 重构升级：基于大五人格连续矩阵的五大派系复合加权滤网
         """
         logger.debug("calculate_occ_spikes......begin")
+        # 提取当前说话人的关系契约
+        rel_profile = personality_layer.config.social_graph.get_relation(speaker_id)
         # 1. 提取当前底层的 OCEAN 核心观念基因 (皆为 0.0 ~ 1.0 之间的浮点数)
         trait_O = personality_layer.get_trait("O")
         trait_C = personality_layer.get_trait("C")
@@ -114,7 +116,7 @@ class OCCEmotionLayer:
         filtered_appraisal["prospect_status"] = raw_appraisal.get("prospect_status", "none")
         filtered_appraisal["self_blameworthiness"] = raw_appraisal.get("self_blameworthiness", 0.0)
         filtered_appraisal["other_desirability"] = raw_appraisal.get("other_desirability", 0.0)
-        filtered_appraisal["other_relationship"] = raw_appraisal.get("other_relationship", 0.0)
+        filtered_appraisal["other_relationship"] = raw_appraisal.get("other_relationship", rel_profile.intimacy_baseline)
         filtered_appraisal["appealingness"] = raw_appraisal.get("appealingness", 0.0)
 
         # --- 结束滤网，以下使用过滤后的内化数据进行 OCC 22 模型结算 ---
@@ -126,6 +128,11 @@ class OCCEmotionLayer:
         other_desirability = filtered_appraisal["other_desirability"]
         other_relationship = filtered_appraisal["other_relationship"]
         appealingness = filtered_appraisal["appealingness"]
+
+        # 覆盖基准关系亲疏度（优先使用配置中心里的真实关系基准）
+        if rel_profile.relation_type != "stranger":
+            # 若已登记为亲属/伴侣，以关系图谱中的亲密度为准，防止大模型单次误判
+            other_relationship = rel_profile.intimacy_baseline
 
         mood_multiplier = mood_layer.get_mood_multiplier()
 
