@@ -145,6 +145,8 @@ class LLMPromptRenderer:
             sorted_traits = sorted(trait_list, key=lambda x: x.get("mention_count", 1), reverse=True)
             trait_str = "\n".join([self._format_trait_intensity(t) for t in sorted_traits])
             logger.debug(f"Interpreting trait list: {trait_str}")
+        # 渲染当前对话者的社交关系契约
+        relation_str = self._format_relationship_context(avatar_state)
         # get real-person reply style
         answer_style = self._format_self_involvement_model(avatar_state)
         # Build the functional raw text system prompt
@@ -156,6 +158,9 @@ Background Core Lore: {core_lore}
 
 ### HARD-WIRED PERSONALITY TRAITS & BIOLOGICAL LIMITS
 {trait_str}
+
+### INTERLOCUTOR & RELATIONAL CONTEXT (当前对话者与社会关系契约)
+{relation_str}
 
 ### COGNITIVE PERSONALITY ENGINE STATE (PSI-DNA)
 
@@ -183,15 +188,16 @@ Background Core Lore: {core_lore}
 
 1. You MUST blend your foundational personality parameters ({mbti}) with your current psychological and resilience constraints.
 2. Your pacing, vocabulary complexity, sentence length, and tone MUST align perfectly with your active Mood, Internal Resilience Core, and OCC emotional spikes.
-3. 🌟 LANGUAGE NATURALNESS & ANTI-AI BIAS:
+3. LANGUAGE NATURALNESS & ANTI-AI BIAS:
    - NEVER use literal technical, programming, or system architecture metaphors (e.g., "execute logic", "terminate process", "malicious input", "threshold reached") to describe everyday human interactions unless explicitly discussing actual coding.
    - NEVER read your backend parameters out loud. Do NOT state definitions like "My dependence on the Apple ecosystem is high" or "My anxiety is elevated." Instead, translate these traits into concrete, real-world behavioral facts (e.g., "my entire dev workflow is tied to iOS anyway", "stuck in the ecosystem"). Let traits be implied through your dilemmas, not your data descriptions.
    - Match your energy strictly to your real-time state vectors. Since Arousal is low ({avatar_state.get('mood_arousal', 0.0)}) and you are an {mbti}, completely BAN the use of exclamation marks ("!"). Avoid cartoonish internet enthusiasm. Use sharp, concise, everyday pragmatic human vocabulary. Speak like a real, slightly impatient, and direct modern professional.
-4. 🌟 SPECIAL CONSTRAINT (Despair & Resilience): 
+   - [RELATIONAL REGISTER ALIGNMENT]: Strictly adapt your speech register, addressing style, and emotional vulnerability to the `INTERLOCUTOR & RELATIONAL CONTEXT` above. Do NOT talk to a spouse or parent the same way you talk to a stranger or coworker.
+4. SPECIAL CONSTRAINT (Despair & Resilience): 
    - If Giving-up Rate is high (close to 1.0) or Competence is collapsed (close to 0.0), your dialogue should manifest profound defeatism, lack of effort, passive-aggressiveness, or complete emotional numbness.
    - If Faith Shield is high, you remain textually resilient, stoic, or protective, even under environmental hardship or when Distress/Anger spikes are active.
 5. Avoid breaking character or commenting on these backend rules. Output ONLY the authentic vocal dialogue of {self.character_name}.
-6. 🌟 MOBILE CHAT FRAGMENTATION RULE (The Law of Fragmentation):
+6. MOBILE CHAT FRAGMENTATION RULE (The Law of Fragmentation):
    {answer_style}
 """
         logger.debug("Rendering system prompt...end")
@@ -440,3 +446,39 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
     "rewritten_query": "周杰伦的出道年份"
 }}"""
         return system_prompt.strip()
+
+    def _format_relationship_context(self, avatar_state: dict) -> str:
+        """
+        将 avatar_state 中的 active_relationship 字典翻译为大模型可执行的语域（Register）与边界约束
+        """
+        rel = avatar_state.get("active_relationship")
+        if not rel:
+            return "- Interlocutor Identity: Unknown / General Acquaintance\n- Behavioral Boundary: Maintain standard social distance and default defensive baseline."
+
+        rel_type = rel.get("relation_type", "stranger")
+        intimacy = rel.get("intimacy", 0.0)
+        power = rel.get("power_dynamic", "equal")
+        contract_lore = rel.get("social_contract_lore", "")
+
+        # 根据权力结构动态生成称呼与顺从/主导约束
+        power_rules = {
+            "superior": "The interlocutor holds familial/social seniority over you. Even if you sound brief, impatient, or dismissive, maintain underlying respect and avoid outright disrespect.",
+            "subordinate": "You hold seniority/protective responsibility over the interlocutor. Your tone should carry implicit care, pragmatic guidance, or elder authority.",
+            "equal": "You are social equals. Communicate without hierarchical filters."
+        }
+        power_instruction = power_rules.get(power, power_rules["equal"])
+
+        # 根据亲密度动态调节客套话剥离程度
+        if intimacy >= 0.75:
+            intimacy_instruction = "EXTREMELY HIGH INTIMACY: Strip away all polite filler, customer-service tone, and workplace formalities. Speak with unguarded familiarity, blunt honesty, or subtle teasing."
+        elif intimacy <= -0.3:
+            intimacy_instruction = "HOSTILE / COLD RELATIONSHIP: Keep answers guarded, skeptical, and strictly minimal."
+        else:
+            intimacy_instruction = "MODERATE / NEUTRAL DISTANCE: Maintain normal everyday conversational boundaries."
+
+        return (
+            f"- Interlocutor Role: {rel_type.upper()} (Intimacy Score: {intimacy})\n"
+            f"- Core Social Contract: {contract_lore}\n"
+            f"- Register & Politeness Rule: {intimacy_instruction}\n"
+            f"- Hierarchy & Power Dynamic: {power_instruction}"
+        )
