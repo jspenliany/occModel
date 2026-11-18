@@ -58,6 +58,14 @@ class OCCEmotionLayer:
 
         # 初始化内化过滤字典
         filtered_appraisal = {k: v for k, v in raw_appraisal.items()}
+        filtered_appraisal.setdefault("desirability", 0.0)
+        filtered_appraisal.setdefault("blameworthiness", 0.0)
+        filtered_appraisal.setdefault("self_blameworthiness", 0.0)
+        filtered_appraisal.setdefault("future_desirability", 0.0)
+        filtered_appraisal.setdefault("prospect_status", "none")
+        filtered_appraisal.setdefault("other_desirability", 0.0)
+        filtered_appraisal.setdefault("other_relationship", rel_profile.intimacy_baseline)
+        filtered_appraisal.setdefault("appealingness", 0.0)
         logger.debug(f"filtered_appraisal: {filtered_appraisal}")
         # 4. 🌟 执行全连续动态扭曲（大河入海，各派系按权重撕扯原始输入）
 
@@ -110,14 +118,6 @@ class OCCEmotionLayer:
                     w_detachment * (raw_blame * cfg.criticism_detachment_multiplier) +
                     (max(0.0, 1.0 - w_pessimist - w_detachment)) * raw_blame
             )
-
-        # 继承其他参数
-        filtered_appraisal["future_desirability"] = raw_appraisal.get("future_desirability", 0.0)
-        filtered_appraisal["prospect_status"] = raw_appraisal.get("prospect_status", "none")
-        filtered_appraisal["self_blameworthiness"] = raw_appraisal.get("self_blameworthiness", 0.0)
-        filtered_appraisal["other_desirability"] = raw_appraisal.get("other_desirability", 0.0)
-        filtered_appraisal["other_relationship"] = raw_appraisal.get("other_relationship", rel_profile.intimacy_baseline)
-        filtered_appraisal["appealingness"] = raw_appraisal.get("appealingness", 0.0)
 
         # --- 结束滤网，以下使用过滤后的内化数据进行 OCC 22 模型结算 ---
         desirability = filtered_appraisal["desirability"]
@@ -234,3 +234,19 @@ class OCCEmotionLayer:
             "emotions": self.active_emotions,
             "decay_rate": self.decay_rate,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'OCCEmotionLayer':
+        instance = cls.new(cls)
+
+        # 1. 初始化全量 22 种情绪基准字典，确保即使快照缺字段也不会引发 KeyError
+        instance.active_emotions = {name: 0.0 for name in cls.ALL_EMOTION_NAMES}
+        # 2. 兼容读取 "emotions"（to_dict 标准键）与 "active_emotions"（潜在别名键）
+        saved_emotions = data.get("emotions") if "emotions" in data else data.get("active_emotions", {})
+        if isinstance(saved_emotions, dict):
+            for emo_name, emo_val in saved_emotions.items():
+                if emo_name in instance.active_emotions:
+                    instance.active_emotions[emo_name] = float(emo_val)
+        # 3. 还原自然衰减率
+        instance.decay_rate = float(data.get("decay_rate", 0.25))
+        return instance
