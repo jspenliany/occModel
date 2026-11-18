@@ -96,6 +96,11 @@ class MoodLayer:
 
     # 追加入 mood.py 的 MoodLayer 类中
     def to_dict(self) -> dict:
+        config_data = (
+            self.config.model_dump()
+            if hasattr(self.config, "model_dump")
+            else self.config.dict()
+        )
         return {
             "baseline_valence": self.baseline_valence,
             "baseline_arousal": self.baseline_arousal,
@@ -104,12 +109,30 @@ class MoodLayer:
             "decay_rate": self.decay_rate,
             "competence": self.competence,
             "faith_shield": self.faith_shield,
-            "giving_up_rate": self.giving_up_rate
+            "giving_up_rate": self.giving_up_rate,
+            "config": config_data
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'MoodLayer':
+    def from_dict(cls, data: dict, config: EngineConfig = None) -> 'MoodLayer':
         instance = cls.__new__(cls)
+
+        # 1. 优先挂载外部传入的共享 config 实例；其次从序列化快照还原；最后兜底默认配置
+        if config is not None:
+            instance.config = config
+        elif "config" in data and data["config"]:
+            instance.config = (
+                EngineConfig.model_validate(data["config"])
+                if hasattr(EngineConfig, "model_validate")
+                else EngineConfig(**data["config"])
+            )
+        else:
+            instance.config = EngineConfig()
+
+        # 2. 还原心境数值状态（跳过已单独处理的 config 键，避免被覆盖为原始 dict）
         for key, value in data.items():
+            if key == "config":
+                continue
             setattr(instance, key, value)
+
         return instance
