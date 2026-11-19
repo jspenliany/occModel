@@ -39,6 +39,11 @@ class AvatarOrchestrator:
         self.avatars[key] = avatar
         avatar.trait_factory = self.trait_normalizer
 
+    def get_avatar(self, key: str) -> PsiAvatar:
+        if key and self.avatars[key]:
+            return self.avatars[key]
+        return PsiAvatar("default","intp","default",None, None)
+
     def process_pipeline(self, user_message: str, message_hist: str, speaker_id: str = "unknown_stranger", temperature: float = 0.4) -> dict:
         """核心批处理流：一键让所有注册的智能体感知外部世界并准备好状态"""
         for key, avatar in self.avatars.items():
