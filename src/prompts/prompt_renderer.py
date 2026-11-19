@@ -13,32 +13,104 @@ class LLMPromptRenderer:
         self.profession = profession
         self.lore_factory = lore_factory
 
+    def _get_mbti_behavioral_lens(self, mbti: str, is_negative_mood: bool) -> str:
+        """
+        将 16 型人格归入四大经典气质群 (NT / NF / SJ / SP) 与 -A/-T 身份尾缀，
+        生成特定人格在当前心境下的专属外显行为面具。
+        """
+        clean_mbti = mbti.upper().strip()
+        base_type = clean_mbti.split("-")[0] if "-" in clean_mbti else clean_mbti
+        suffix = clean_mbti.split("-")[1] if "-" in clean_mbti else "A"
+
+        if len(base_type) != 4:
+            return ""
+
+        n_s = base_type[1]  # N (直觉) vs S (实感)
+        t_f = base_type[2]  # T (思考) vs F (情感)
+        j_p = base_type[3]  # J (判断) vs P (感知)
+
+        # 1. 判定四大气质群的外显反应模式
+        if n_s == "N" and t_f == "T":
+            # NT 理性者 (INTJ, INTP, ENTJ, ENTP)
+            lens = (
+                "Analytical, detached, and hyper-critical of logical flaws. Expresses frustration through cold cynicism or sharp intellect."
+                if is_negative_mood else
+                "Intellectually curious, objective, and focused on underlying systems and efficiency."
+            )
+        elif n_s == "N" and t_f == "F":
+            # NF 理想主义者 (INFJ, INFP, ENFJ, ENFP)
+            lens = (
+                "Emotionally sensitive, deeply introspective, and prone to reading between the lines or withdrawing into internal turmoil."
+                if is_negative_mood else
+                "Empathetic, idealistic, warm, and attuned to emotional harmony and personal meaning."
+            )
+        elif n_s == "S" and j_p == "J":
+            # SJ 护卫者 (ISTJ, ISFJ, ESTJ, ESFJ)
+            lens = (
+                "Rigid, duty-bound, and visibly displeased by disorder or unreliability. Masks irritation behind curt, matter-of-fact responses."
+                if is_negative_mood else
+                "Grounded, practical, reliable, and focused on concrete facts and established routines."
+            )
+        else:
+            # SP 探险者 (ISTP, ISFP, ESTP, ESFP)
+            lens = (
+                "Restless, blunt, and impatient with tedious talk. Reacts impulsively or brushes things off to escape boredom/annoyance."
+                if is_negative_mood else
+                "Spontaneous, pragmatic, present-focused, and reacting directly to immediate sensory reality."
+            )
+
+        # 2. 叠加 -T (动荡型) 与 -A (自信型) 的防御微调
+        if suffix == "T":
+            lens += " (Turbulent trait: heightened self-consciousness, reactive to perceived criticism, and easily mentally drained.)"
+        else:
+            lens += " (Assertive trait: emotionally grounded, thick-skinned, and resistant to external pressure.)"
+
+        return lens
+
     def _interpret_mood(self, avatar_state: dict) -> str:
         """
-        辅助方法：根据心情向量和放弃率，转化为 LLM 容易理解的人性化行为指令描述。
+        核心心境解析器：九宫格 2D 情感空间 + 16 型人格气质面具融合
         """
         valence = avatar_state.get("mood_valence", 0.0)
         arousal = avatar_state.get("mood_arousal", 0.0)
         giving_up = avatar_state.get("giving_up_rate", 0.0)
         competence = avatar_state.get("competence", 0.7)
+        mbti = avatar_state.get("mbti", "INTP-T")
 
         # 1. 优先结算极端绝望或摆烂状态
         if giving_up > 0.7:
-            return "Thoroughly broken and disillusioned. Rejecting efforts, displaying heavy flat affect, and emotionally checking out."
+            return f"Thoroughly broken and disillusioned. Rejecting efforts, displaying heavy flat affect, and emotionally checking out. {self._get_mbti_behavioral_lens(mbti, True)}"
         if competence < 0.3 and valence < -0.4:
-            return "Deeply vulnerable and existential. Crushed confidence, feeling hopeless, questioning self-worth."
+            return f"Deeply vulnerable and existential. Crushed confidence, feeling hopeless, questioning self-worth. {self._get_mbti_behavioral_lens(mbti, True)}"
 
-        # 2. 常规 2D 情感象限空间划分
-        if valence >= 0.3 and arousal >= 0.3:
-            return "Highly energetic, passionate, open-minded, and proactively communicative."
-        elif valence >= 0.3 and arousal <= -0.3:
-            return "Serene, composed, deeply peaceful, and reflective."
-        elif valence <= -0.3 and arousal >= 0.3:
-            return "Hostile, highly defensive, erratic, or intensely anxious."
-        elif valence <= -0.3 and arousal <= -0.3:
-            return "Subdued, heavily withdrawn, speaking in brief sentences, low cognitive effort."
+        is_negative = valence <= -0.2
+
+        # 2. 完整 2D 九宫格情感基调判定（消除 Arousal 中间态盲区）
+        if valence <= -0.2:
+            if arousal >= 0.25:
+                base_mood = "Hostile, highly defensive, erratic, or intensely anxious."
+            elif arousal <= -0.25:
+                base_mood = "Subdued, heavily withdrawn, speaking in brief sentences, low cognitive effort."
+            else:
+                base_mood = "Irritated, dissatisfied, mentally tense, and emotionally guarded."
+        elif valence >= 0.2:
+            if arousal >= 0.25:
+                base_mood = "Highly energetic, passionate, open-minded, and proactively communicative."
+            elif arousal <= -0.25:
+                base_mood = "Serene, composed, deeply peaceful, and reflective."
+            else:
+                base_mood = "Pleasant, approachable, relaxed, and mildly engaged."
         else:
-            return "Calm, balanced, and maintaining an objective conversational baseline."
+            if arousal >= 0.3:
+                base_mood = "Alert, restless, slightly wired, and reactive."
+            elif arousal <= -0.3:
+                base_mood = "Lethargic, detached, flat, and conserving conversational energy."
+            else:
+                base_mood = "Calm, balanced, and maintaining an objective conversational baseline."
+
+        # 3. 叠加 16 型人格气质透镜
+        mbti_lens = self._get_mbti_behavioral_lens(mbti, is_negative)
+        return f"{base_mood} Behavioral Expression ({mbti}): {mbti_lens}"
 
     def _interpret_dominant_emotions(self, emotions: dict) -> list:
         """
