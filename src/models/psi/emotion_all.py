@@ -237,7 +237,7 @@ class OCCEmotionLayer:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'OCCEmotionLayer':
-        instance = cls.new(cls)
+        instance = cls.__new__(cls)
 
         # 1. 初始化全量 22 种情绪基准字典，确保即使快照缺字段也不会引发 KeyError
         instance.active_emotions = {name: 0.0 for name in cls.ALL_EMOTION_NAMES}

@@ -96,11 +96,6 @@ class MoodLayer:
 
     # 追加入 mood.py 的 MoodLayer 类中
     def to_dict(self) -> dict:
-        config_data = (
-            self.config.model_dump()
-            if hasattr(self.config, "model_dump")
-            else self.config.dict()
-        )
         return {
             "baseline_valence": self.baseline_valence,
             "baseline_arousal": self.baseline_arousal,
@@ -109,8 +104,7 @@ class MoodLayer:
             "decay_rate": self.decay_rate,
             "competence": self.competence,
             "faith_shield": self.faith_shield,
-            "giving_up_rate": self.giving_up_rate,
-            "config": config_data
+            "giving_up_rate": self.giving_up_rate
         }
 
     @classmethod
