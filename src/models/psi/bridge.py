@@ -129,7 +129,7 @@ class PSI3DGlassBridge:
                     self.p_layer.mbti = payload["mbti"]
 
             if "mood" in payload and hasattr(MoodLayer, "from_dict"):
-                self.m_layer = MoodLayer.from_dict(payload["mood"])
+                self.m_layer = MoodLayer.from_dict(payload["mood"], config=self.p_layer.config)
 
             if "emotion" in payload and hasattr(OCCEmotionLayer, "from_dict"):
                 self.e_layer = OCCEmotionLayer.from_dict(payload["emotion"])

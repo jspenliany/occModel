@@ -7,14 +7,14 @@ class OCCEmotionLayer:
     1. 实现全量 22 种情感。
     2. 🌟 核心升级：实现“观念内化过滤”，让 AI 产生自我证实、自我强化的滤网。
     """
-
+    ALL_EMOTION_NAMES = [
+        "Joy", "Distress", "Hope", "Fear", "Satisfaction", "Fears_Confirmed",
+        "Relief", "Disappointment", "Happy_For", "Pity", "Resentment", "Gloating",
+        "Pride", "Shame", "Admiration", "Reproach", "Liking", "Disliking",
+        "Gratitude", "Anger", "Gratification", "Remorse"
+    ]
     def __init__(self):
-        self.active_emotions = {name: 0.0 for name in [
-            "Joy", "Distress", "Hope", "Fear", "Satisfaction", "Fears_Confirmed",
-            "Relief", "Disappointment", "Happy_For", "Pity", "Resentment", "Gloating",
-            "Pride", "Shame", "Admiration", "Reproach", "Liking", "Disliking",
-            "Gratitude", "Anger", "Gratification", "Remorse"
-        ]}
+        self.active_emotions = {name: 0.0 for name in self.ALL_EMOTION_NAMES}
         self.decay_rate = 0.25
 
     def update_decay(self):
