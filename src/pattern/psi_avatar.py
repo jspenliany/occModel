@@ -32,9 +32,9 @@ class PsiAvatar:
         self.core_memories: list[CoreMemoryNode] = []
         self.message_history = AvatarChatHistory()
 
-    def get_reflect_payload(self, context: str, user_input: str) -> list:
+    def get_reflect_payload(self, context: str, user_input: str, speaker_id: str = "unknown_stranger") -> list:
         """生成用于让大模型评估情感冲击（OCC Delta）的请求 Payload"""
-        current_state = self.engine.get_current_avatar_state()
+        current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
         reflect_prompt = self.renderer.render_reflect_prompt(current_state)
         logger.debug(f"get_reflect_payload  reflect_prompt: {reflect_prompt}")
         return [
@@ -57,23 +57,25 @@ class PsiAvatar:
             ),
         ]
 
-    def apply_appraisal_and_tick(self, appraisal_data: dict):
+    def apply_appraisal_and_tick(self, appraisal_data: dict, speaker_id: str = "unknown_stranger"):
         """内化刺激并推进心理时钟"""
-        old_state = self.engine.get_current_avatar_state()
-        self.engine.receive_user_stimulus(appraisal_data)
+        old_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
+        self.engine.receive_user_stimulus(appraisal_data, speaker_id=speaker_id)
         self.engine.update_system_clock()
-        new_state = self.engine.get_current_avatar_state()
+        new_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
 
         logger.debug(
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
-    def get_common_chat_payload(self, context: str, user_input: str) -> list:
+    def get_common_chat_payload(self, context: str, user_input: str, speaker_id: str = "unknown_stranger") -> list:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
-        logger.debug(f"get_common_chat_payload  context: {context}  user_input: {user_input}")
-        current_state = self.engine.get_current_avatar_state()
+        logger.debug(f"get_common_chat_payload  context: {context}  user_input: {user_input} speaker_id: {speaker_id}")
+        current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
         system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list)
         logger.debug(f"get_response_payload system_prompt: {system_prompt}")
-        self.message_history.add_user_message(user_input)
+
+        # 把 speaker_id 同步记录进对话历史
+        self.message_history.add_user_message(user_input, speaker=speaker_id)
         logger.debug(f"[{self.character_name} ({self.engine.p_layer.mbti})] Before: {current_state}")
         return [
             ChatCompletionSystemMessageParam(
@@ -90,6 +92,11 @@ class PsiAvatar:
         return self.character_name
     def get_profession(self) -> str:
         return self.profession
+
+    # 🌟 新增：方便外部直接为该虚拟人注册亲友关系
+    def register_relationship(self, profile):
+        """注册人际关系契约（如伴侣、父母、同事）"""
+        self.engine.p_layer.config.social_graph.register_relation(profile)
 
     def update_trait(self, trait_data: list, update_time: str) -> str:
 
@@ -273,4 +280,77 @@ class PsiAvatar:
             logger.info(f"Avatar [{self.character_name}] state and personality metadata successfully reloaded.")
         except Exception as e:
             logger.error(f"Critical error while loading avatar state for {self.character_name}: {e}")
+            raise e
+
+    def load_avatar_state(self, archive_data: dict) -> None:
+        """
+        Deep re-hydration of the digital soul's memory state graph.
+        Defensively parses serialised ISO string timestamps back into timezone-aware datetimes.
+        """
+        try:
+            logger.info(f"Initiating state hydration graph for avatar: {self.get_charactor_name()}")
+
+            # 1. Recover core operational profiles & system structural layers
+            # Assuming your existing bridge instantiation or sync looks like this:
+            if "psi_live_state" in archive_data:
+                # If your PSI3DGlassBridge has force_sync_state implemented:
+                if hasattr(self, "psi_engine") and self.psi_engine:
+                    self.psi_engine.force_sync_state(archive_data["psi_live_state"])
+                else:
+                    logger.error(f"psi_engine not found in psi_live_state: {archive_data}")
+            else:
+                logger.error(f"psi_live_state not found in archive_data: {archive_data}")
+
+            # 2. Re-hydrate banks
+            if "trait_memory_bank" in archive_data:
+                self.trait_memory_bank = archive_data["trait_memory_bank"]
+            else:
+                logger.error(f"trait_memory_bank not found in archive_data: {archive_data}")
+            if "core_memory_bank" in archive_data:
+                self.core_memory_bank = archive_data["core_memory_bank"]
+            else:
+                logger.error(f"core_memory_bank not found in archive_data: {archive_data}")
+
+            # 3. 🌟 CORE PATCH: Defensive Chat History Timeline Re-hydration
+            raw_history = archive_data.get("chat_history", [])
+            hydrated_history = []
+
+            for turn in raw_history:
+                # Defensively copy the dictionary payload to avoid modifying unexpected references
+                clean_turn = {k: v for k, v in turn.items()}
+
+                timestamp_raw = clean_turn.get("timestamp")
+
+                if timestamp_raw:
+                    if isinstance(timestamp_raw, str):
+                        try:
+                            # 1. Standard ISO-8601 parser (handles "+08:00" offsets automatically)
+                            clean_turn["timestamp"] = datetime.fromisoformat(timestamp_raw)
+                        except ValueError:
+                            try:
+                                # 2. Fallback parser for legacy formats missing explicit standard structures
+                                clean_turn["timestamp"] = datetime.strptime(timestamp_raw, "%Y-%m-%d %H:%M:%S")
+                                # Fall back safely to target system timezone configuration if offset is completely stripped
+                                clean_turn["timestamp"] = clean_turn["timestamp"].replace(
+                                    tzinfo=zoneinfo.ZoneInfo("Asia/Shanghai")
+                                )
+                            except Exception as inner_e:
+                                logger.error(f"Failed parsing string timestamp '{timestamp_raw}': {inner_e}")
+                                # Secondary safety net: fallback directly to system execution wall clock time
+                                clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+                    elif isinstance(timestamp_raw, datetime):
+                        # Safeguard in case payload already contains runtime objects
+                        pass
+                else:
+                    # Tertiary safety net if data keys are corrupted or absent
+                    clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+
+                hydrated_history.append(clean_turn)
+
+            # Assign fully verified timeline graph back to runtime memory context
+            self.chat_history = hydrated_history
+            logger.info(f"Successfully re-hydrated {len(hydrated_history)} historical turns into state memory.")
+
+        except Exception as e:
+            logger.critical(f"Fatal error during cold re-hydration of agent state data: {e}")
             raise e

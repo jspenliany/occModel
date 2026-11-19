@@ -145,6 +145,7 @@ class PSI3DGlassBridge:
         bridge.p_layer = PersonalityLayer.from_dict(state_dict["personality"])
         bridge.m_layer = MoodLayer.from_dict(state_dict["mood"])
         bridge.e_layer = OCCEmotionLayer.from_dict(state_dict["emotion"]) # 内部自动处理物理时间衰减！
+        bridge.m_layer.config = bridge.p_layer.config
         bridge.anger_habit_counter = state_dict["anger_habit_counter"]
         bridge.in_hardship_flag = state_dict["in_hardship_flag"]
         bridge.plasticity_speed = 0.015
