@@ -372,7 +372,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
     def render_reflect_prompt(self, avatar_state: dict) -> str:
         """
         external input affect occ model:
-        reflect message content into occ values.
+        reflect message content into occ values (with relational calibration).
         """
         logger.debug("reflect message_content into occ values...begin")
         mbti = avatar_state.get("mbti", "UNKNOWN")
@@ -382,25 +382,55 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 
         # get core_lore
         core_lore = self.lore_factory.create_core_lore(self.profession, mbti, ocean_dna)
+
+        # 🌟 提取当前说话人的社会关系契约（兼容旧状态字典，缺省时自动降级为陌生人）
+        rel = avatar_state.get("active_relationship", {})
+        rel_type = rel.get("relation_type", "stranger")
+        intimacy = rel.get("intimacy", 0.0)
+        power = rel.get("power_dynamic", "equal")
+        contract_lore = rel.get("social_contract_lore",
+                                "普通社交关系或陌生人。保持正常的社交边界、礼貌距离或默认防备。")
+
+        # 🌟 根据权力结构生成量化校准指引
+        power_calibration = {
+            "superior": "对方是你的长辈或上级（权力上位）。面对对方的催促、唠叨或批评，请克制对他人的指责（blameworthiness 负向幅度减半），更多转化为自身的压力或自责（self_blameworthiness 偏负）。",
+            "subordinate": "对方是你的晚辈或下属（权力下位）。面对对方的失误或不当言行，你会以引导者/审视者的标准进行直接问责（blameworthiness 明确为负）。",
+            "equal": "双方处于平等社会地位，完全按客观标准与亲密度进行评估。"
+        }.get(power, "双方处于平等社会地位，完全按客观标准与亲密度进行评估。")
+
         reflect_prompt = f"""
         # ROLE
-你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
+你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，结合【当前对话者的社会关系契约】，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
 
 # TARGET CHARACTER COGNITIVE ANCHOR (角色认知锚点)
-- 名字: {avatar_state.get("profession","manager")}
+- 名字: {self.character_name} ({avatar_state.get("profession", "manager")})
 - 基础人格 (MBTI): {mbti}
 - 核心背景 (Background Core Lore): {core_lore} 
-# 💡 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
+# 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
+
+# INTERLOCUTOR RELATIONAL CONTRACT (当前说话人社会关系契约 - 极其重要)
+- 关系身份: {rel_type.upper()}
+- 亲密度基准 (Intimacy): {intimacy} (范围 -1.0 到 1.0)
+- 权力结构 (Power Dynamic): {power}
+- 关系契约说明: {contract_lore}
+
+# RELATIONAL QUANTIFICATION RULES (社会关系对 OCC 指标的量化校准铁律)
+在给以下 8 个参数打分时，**必须**先经过上述关系契约的校准：
+1. **基准锚定**：`other_relationship` 必须以当前亲密度 `{intimacy}` 为基准（仅允许在 ±0.15 内微调）。
+2. **越界与语言豁免权校准（影响 `blameworthiness` 与 `appealingness`）**：
+   - 若亲密度高（`Intimacy >= 0.7`，如伴侣/挚友）：对方拥有极高的语言豁免权。调侃、喊亲昵称呼（如“宝”、“媳妇”）、开玩笑互损**绝不视为冒犯**（`blameworthiness` 应保持 `0.0` 或微正，`appealingness` 偏正）；但若是伴侣的冷漠、否定或指责，则情感痛感极深（`desirability` 需给出更深的负值）。
+   - 若亲密度低（`Intimacy < 0.3`，如陌生人/普通同事）：对越界行为**零容错**。一旦出现突兀的亲昵称呼、冒犯性玩笑或过度打探隐私，必须判定为严重越界冒犯（`blameworthiness` 给出 `-0.5` 到 `-0.9`，`appealingness` 为负）。
+3. **权力结构校准**：{power_calibration}
 
 # OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
 请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
 
 1. `desirability` (当前事件对角色自身目标的利弊): 
-   - 范围 [-1.0 到 1.0]。符合角色的 Core Lore 或好事发生输出【正数】；阻碍角色效率、引发系统混乱或坏事发生输出【负数】。
+   - 范围 [-1.0 到 1.0]。符合角色的 Core Lore、获得伴侣/亲友情感支持或好事发生输出【正数】；阻碍角色效率、破坏亲密关系和谐或坏事发生输出【负数】。
 2. `blameworthiness` (他人言行对角色行为标准的符合度):
-   - 范围 [-1.0 到 1.0]。他人的言行值得赞赏、符合专业标准输出【正数】；他人故意刁难、缺乏逻辑、消极怠工、值得谴责输出【负数】。
+   - 范围 [-1.0 到 1.0]。他人的言行值得赞赏、符合专业标准或亲密伴侣的正常亲昵互动输出【正数】或 `0.0`；陌生人越界冒犯、他人故意刁难、缺乏逻辑、消极怠工、值得谴责输出【负数】。
 3. `self_blameworthiness` (自身言行对自身标准的符合度/自责):
-   - 范围 [-1.0 到 1.0]。通常为 0.0。若角色自身犯错产生羞耻或自责输出【负数】。
+   - 范围 [-1.0 到 1.0]。通常为 0.0。若角色自身犯错、未能满足伴侣/长辈期待而产生羞耻或自责输出【负数】。
 4. `future_desirability` (远期未来前瞻期望值):
    - 范围 [0.0 到 1.0]。对未来产生希望的潜在强度，只能为【正数】。若无则输出 0.0。
 5. `prospect_status` (预期推进状态字符串):
@@ -410,11 +440,11 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
      - `"disconfirmed"`: 之前预期的好事落空，或预期的坏事警报解除。
      - `"none"`: 突发性事件，或没有特定的预期推进。
 6. `other_desirability` (该事件对他人而言的利弊):
-   - 范围 [-1.0 到 1.0]。对他人是好事输出【正数】，对他人是坏事输出【负数】。
+   - 范围 [-1.0 到 1.0]。对他人是好事输出【正数】，对他人是坏事输出【负数】。当亲密度高时，对方的利弊会直接触发角色的共情（Happy_For / Pity）。
 7. `other_relationship` (角色与对方的亲疏或敌对关系基准):
-   - 范围 [-1.0 到 1.0]。喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
+   - 范围 [-1.0 到 1.0]。**严格锚定当前关系亲密度 `{intimacy}`**，喜欢对方、亲近输出【正数】；敌对、反感、竞争关系输出【负数】。
 8. `appealingness` (用户表现特质与角色喜好的契合度):
-   - 范围 [-1.0 到 1.0]。对方的谈吐或状态符合角色审美喜好输出【正数】；对方的表达方式触发角色极度反感输出【负数】。
+   - 范围 [-1.0 到 1.0]。符合当前关系边界与角色审美喜好输出【正数】；对方的表达方式触发角色极度反感或越界不适输出【负数】。
 
 # OUTPUT FORMAT (JSON ONLY)
 你必须且只能输出标准的 JSON 格式，绝不包含任何正文解释、分析文字或 Markdown 标记。确保所有键名与系统字典完全一致：
