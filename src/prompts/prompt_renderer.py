@@ -188,43 +188,65 @@ class LLMPromptRenderer:
 
     def _format_self_involvement_model(self, avatar_state: dict) -> str:
         """
-        instruct the answer style to self involvement model
-        :param avatar_state:
-        :return:
+        自我涉入度气口控制模型：融合全量 OCC 正负向峰值、微情绪过渡态以及社交关系边界。
         """
-        # 获取后端评估完最新的 OCC 即时波动与心境
         active_emotions = avatar_state.get('active_emotions', {})
         current_arousal = avatar_state.get('mood_arousal', 0.0)
+        rel = avatar_state.get('active_relationship', {})
+        intimacy = rel.get('intimacy', 0.0)
 
-        # 1. 动态捕获正向兴奋波峰（Joy / Hope 暴击）与反向愤怒波峰（Anger / Distress 暴击）
-        joy_spike = active_emotions.get("Joy", 0.0)
-        hope_spike = active_emotions.get("Hope", 0.0)
-        anger_spike = active_emotions.get("Anger", 0.0)
-        distress_spike = active_emotions.get("Distress", 0.0)
+        # 1. 聚合 22 种 OCC 情感中的正向峰值与负向峰值（防止漏判 Admiration/Disliking 等情绪）
+        positive_pool = ["Joy", "Hope", "Admiration", "Liking", "Pride", "Gratitude", "Satisfaction"]
+        negative_pool = ["Anger", "Distress", "Reproach", "Disliking", "Resentment", "Fears_Confirmed"]
 
-        # 2. 根据您的心理学理解，执行三向动态气口路由
-        if anger_spike > 0.6 or distress_spike > 0.6:
-            # 场景二：反向雷区爆发 —— 愤怒反驳、长文碾压
-            pacing_instruction = f"""
-           - 🌟 [CRITICAL ATTACK & FIGHT STATE]: A user statement has severely violated your core values or personal stability, triggering an intense Anger spike ({anger_spike:.2f}). 
-           - You MUST completely ABANDON the "||" mobile shortcut delimiter. Do not write short chat bubbles. 
-           - Shift your entire formatting into a long, densely packed, highly logical paragraph. Channel your high Neuroticism into counter-attacking the user's premise, using sharp, clinical tech logic or defensive evasiveness. Show severe irritation.
+        max_pos_emo, max_pos_val = max(
+            ((emo, active_emotions.get(emo, 0.0)) for emo in positive_pool),
+            key=lambda x: x,
+            default=("Joy", 0.0)
+        )
+        max_neg_emo, max_neg_val = max(
+            ((emo, active_emotions.get(emo, 0.0)) for emo in negative_pool),
+            key=lambda x: x,
+            default=("Anger", 0.0)
+        )
+
+        # 2. 动态气口路由
+        if max_neg_val > 0.6:
+            # 场景二：反向雷区爆发 —— 结合亲密度决定是“硬刚开怼”还是“防御性长文内耗”
+            attack_style = (
+                "Because the interlocutor is close to you, channel this spike into emotional vulnerability, defensive over-explaining, or hurt frustration rather than stranger-level hostility."
+                if intimacy >= 0.7 else
+                "Channel your traits into sharply counter-attacking the user's premise, using blunt refutation, cold sarcasm, or defensive evasiveness."
+            )
+            return f"""
+           - 🌟 [CRITICAL NEGATIVE SPIKE ({max_neg_emo}: {max_neg_val:.2f})]: The user's input has violated your core values or triggered strong negative friction.
+           - Completely ABANDON the "||" mobile shortcut delimiter. Output a continuous, densely packed, highly logical paragraph.
+           - {attack_style}
                     """
-        elif joy_spike > 0.6 or hope_spike > 0.6:
-            # 场景一：正向三观契合 —— 异常兴奋、激动倾诉
-            pacing_instruction = f"""
-           - 🌟 [INTENSE ADVOCACY & EXCITED STATE]: The user has validated your core interest or personal pride, triggering a massive positive emotional spike ({joy_spike:.2f}). 
-           - You are highly energized and passionate. You are permitted to use exclamation marks ("!") to show true enthusiasm. 
-           - Disengage the "||" short bubble limits. Output a verbose, long-form paragraph, passionately defending, supporting, or expanding on this concept with absolute data-driven intellectual excitement.
+
+        elif max_pos_val > 0.6:
+            # 场景一：正向三观/核心利益契合 —— 异常兴奋、激动倾诉
+            return f"""
+           - 🌟 [INTENSE ADVOCACY & EXCITED STATE ({max_pos_emo}: {max_pos_val:.2f})]: The user has strongly validated your core interests or values.
+           - You are highly energized and passionate. You are permitted to use exclamation marks ("!") to show genuine enthusiasm.
+           - Disengage the "||" short bubble limits. Output a verbose, long-form paragraph, passionately defending, supporting, or expanding on this topic with intellectual excitement.
                     """
+
+        elif max_pos_val >= 0.3 or max_neg_val >= 0.3:
+            # 🌟 新增过渡档：微情绪涟漪（既不是狂喜暴怒，也不是完全没兴趣）
+            return f"""
+           - 🌟 [ENGAGED CONVERSATIONAL RIPPLE]: The topic triggers a noticeable emotional ripple ({max_pos_emo if max_pos_val >= max_neg_val else max_neg_emo}).
+           - Use the delimiter "||" to split your response into 2 to 3 natural chat bubbles.
+           - Express genuine mild interest, subtle skepticism, or dry humor without over-dramatizing. Keep the dialogue flowing naturally.
+                    """
+
         else:
-            # 场景三：日常不感兴趣的事务 —— 平淡附和、短句碎弹窗、带点疑问
-            pacing_instruction = f"""
-           - 🌟 [CASUAL LEAP-FROG CHAT]: The current topic is ordinary and does not threaten or exalt your egocore. 
-           - You are in a low-energy, slightly detached state (Arousal={current_arousal}). You MUST use the delimiter "||" to segment your thoughts into 2 to 3 short mobile bubbles. 
-           - Keep your vocabulary concise, slightly impatient, and casual. End the last bubble with a slight question or tech-cynical remark (e.g., "你觉得呢", "看情况呗"), keeping the interaction minimal.
+            # 场景三：日常不感兴趣的事务 —— 平淡附和、极简短句、带点疑问
+            return f"""
+           - 🌟 [CASUAL LEAP-FROG CHAT]: The current topic is ordinary and does not engage your core interests (Arousal={current_arousal}).
+           - You MUST use the delimiter "||" to segment your thoughts into 1 to 2 ultra-short mobile bubbles (occasionally just 1 single bubble without "||").
+           - Keep vocabulary concise, slightly detached, and casual. Optionally end with a brief counter-question or noncommittal remark (e.g., "你觉得呢", "看情况吧").
                     """
-        return pacing_instruction
 
     def render_system_prompt(self, avatar_state: dict, trait_list: list = None) -> str:
         """
