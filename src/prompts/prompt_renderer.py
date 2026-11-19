@@ -41,22 +41,56 @@ class LLMPromptRenderer:
             return "Calm, balanced, and maintaining an objective conversational baseline."
 
     def _interpret_dominant_emotions(self, emotions: dict) -> list:
-        """Filters short-term spikes to isolate primary active triggers."""
-
-        # Only extract short-term spikes above a strict activation threshold
+        """
+        将 OCC 短期情绪按强度分为【微弱涟漪 (0.15~0.39)】与【强烈爆发 (>=0.4)】两档，
+        保留日常社交中的微妙情绪棱角（如轻微嫌弃、淡淡好感、微怒）。
+        """
         logger.debug("Interpreting dominant emotions...begin")
-        active = [name for name, val in emotions.items() if val >= 0.4]
-        if not active:
-            return ["No intense immediate emotional triggers active."]
+        if not emotions:
+            return []
 
-        descriptions = {
-            "Joy": "Experiencing immediate internal validation, pleasure, or deep satisfaction.",
-            "Distress": "Suffering from cognitive dissonance, personal loss, or acute disappointment.",
-            "Anger": "Experiencing active indignation or hostility regarding a targeted blameworthy action.",
-            "Remorse": "Weighed down by intense self-blame, inner guilt, or regret over personal performance."
+        # 按强度从高到低排序，最多取前 3 个主导情绪，避免提示词信息过载
+        sorted_emos = sorted(emotions.items(), key=lambda x: x[1], reverse=True)
+
+        strong_descriptions = {
+            "Joy": "Experiencing intense internal validation, pleasure, or deep satisfaction.",
+            "Distress": "Suffering from acute cognitive dissonance, personal loss, or heavy frustration.",
+            "Anger": "Experiencing strong indignation, sharp irritation, or hostility toward blameworthy behavior.",
+            "Remorse": "Weighed down by heavy self-blame, inner guilt, or regret.",
+            "Disliking": "Feeling strong aversion, disgust, or repulsion toward the topic or person.",
+            "Reproach": "Strongly judging and disapproving of the other person's lack of logic or standards.",
+            "Hope": "Driven by strong anticipation and optimism for a positive future outcome.",
+            "Fear": "Experiencing acute anxiety and dread over an impending negative consequence.",
+            "Shame": "Feeling exposed, embarrassed, or deeply self-conscious about personal flaws.",
+            "Pride": "Feeling a strong sense of intellectual or personal achievement.",
+            "Liking": "Feeling genuine warmth, attraction, or affinity."
         }
+
+        subtle_descriptions = {
+            "Joy": "Feeling a subtle spark of amusement or mild pleasantness.",
+            "Distress": "Feeling slightly bothered, mentally fatigued, or mildly uncomfortable.",
+            "Anger": "Feeling a trace of annoyance or mild impatience.",
+            "Remorse": "Feeling a slight twinge of self-doubt or awkwardness.",
+            "Disliking": "Feeling mildly turned off, skeptical, or subtly repelled by what was said.",
+            "Reproach": "Silently judging or slightly looking down on the other person's remark.",
+            "Hope": "Holding a quiet, cautious optimism.",
+            "Fear": "Feeling a faint undercurrent of unease or hesitation.",
+            "Shame": "Feeling slightly awkward or mildly self-conscious.",
+            "Pride": "Feeling a quiet, understated sense of competence.",
+            "Liking": "Feeling a subtle sense of rapport or mild interest."
+        }
+
+        results = []
+        for emo, val in sorted_emos[:3]:  # 最多提取前 3 个最高情绪，防止多情绪打架
+            if val >= 0.4:
+                desc = strong_descriptions.get(emo, f"Experiencing intense {emo}.")
+                results.append(f"[STRONG {emo.upper()} ({val:.2f})]: {desc}")
+            elif val >= 0.15:
+                desc = subtle_descriptions.get(emo, f"Feeling a subtle hint of {emo}.")
+                results.append(f"[SUBTLE RIPPLE - {emo} ({val:.2f})]: {desc}")
+
         logger.debug("Interpreting dominant emotions...end")
-        return [descriptions.get(emo, f"Feeling active {emo}.") for emo in active]
+        return results
 
     def _format_trait_intensity(self, trait: dict) -> str:
         """
