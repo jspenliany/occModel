@@ -406,18 +406,18 @@ class PsiAvatar:
                                 clean_turn["timestamp"] = datetime.strptime(timestamp_raw, "%Y-%m-%d %H:%M:%S")
                                 # Fall back safely to target system timezone configuration if offset is completely stripped
                                 clean_turn["timestamp"] = clean_turn["timestamp"].replace(
-                                    tzinfo=zoneinfo.ZoneInfo("Asia/Shanghai")
+                                    tzinfo=ZoneInfo("Asia/Shanghai")
                                 )
                             except Exception as inner_e:
                                 logger.error(f"Failed parsing string timestamp '{timestamp_raw}': {inner_e}")
                                 # Secondary safety net: fallback directly to system execution wall clock time
-                                clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+                                clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
                     elif isinstance(timestamp_raw, datetime):
                         # Safeguard in case payload already contains runtime objects
                         pass
                 else:
                     # Tertiary safety net if data keys are corrupted or absent
-                    clean_turn["timestamp"] = datetime.now(zoneinfo.ZoneInfo("Asia/Shanghai"))
+                    clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
 
                 hydrated_history.append(clean_turn)
 
