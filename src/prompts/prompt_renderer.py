@@ -248,7 +248,39 @@ class LLMPromptRenderer:
            - Keep vocabulary concise, slightly detached, and casual. Optionally end with a brief counter-question or noncommittal remark (e.g., "你觉得呢", "看情况吧").
                     """
 
-    def render_system_prompt(self, avatar_state: dict, trait_list: list = None) -> str:
+    def _format_memories(self, memories: list, max_items: int = 8) -> str:
+        """
+        将精细化记忆节点按可信度与提及频次排序，翻译为带“源头认知标签”的上下文指令
+        """
+        if not memories:
+            return "None"
+
+        # 兼容 dict 与 dataclass，按 (可信度 * 0.7 + 提及频次 * 0.3) 排序，保留最核心记忆防 Prompt 过载
+        normalized = [asdict(m) if hasattr(m, "__dataclass_fields__") else m for m in memories]
+        sorted_mems = sorted(
+            normalized,
+            key=lambda x: (float(x.get("credibility", 0.5)) * 0.7 + min(x.get("mention_count", 1), 5) * 0.06),
+            reverse=True
+        )[:max_items]
+
+        type_labels = {
+            "episodic_experiential": "✅ [亲身经历/铁证事实 - Credibility: 1.0]",
+            "episodic_observed": "👁️ [亲眼目击事实 - Credibility: 1.0]",
+            "semantic_hearsay": "🗣️ [听来的传闻/非一手情报 - 需保持理性存疑]",
+            "subconscious_dream": "💭 [梦境/潜意识幻觉 - 明确知道这是假的/做梦，切勿当成现实]"
+        }
+
+        lines = []
+        for m in sorted_mems:
+            m_type = m.get("memory_type", "episodic_experiential")
+            cred = m.get("credibility", 1.0)
+            fact = m.get("fact_summary", "")
+            label = type_labels.get(m_type, f"[{m_type} | Credibility: {cred}]")
+            lines.append(f"- {label} {fact}")
+
+        return "\n".join(lines)
+
+    def render_system_prompt(self, avatar_state: dict, trait_list: list = None, memories_list: list = None) -> str:
         """
         Main interface method:
         Generates the final comprehensive System Prompt string injected directly into the LLM API.
@@ -273,6 +305,13 @@ class LLMPromptRenderer:
             sorted_traits = sorted(trait_list, key=lambda x: x.get("mention_count", 1), reverse=True)
             trait_str = "\n".join([self._format_trait_intensity(t) for t in sorted_traits])
             logger.debug(f"Interpreting trait list: {trait_str}")
+        # get memory
+        memory_str = "None"
+        if memories_list:
+            logger.debug(f"memories_list...size = {len(memories_list)}")
+            sorted_memories = sorted(memories_list, key=lambda x: x.get("mention_count", 1), reverse=True)
+            memory_str = "\n".join([self._format_memories(t) for t in sorted_memories])
+            logger.debug(f"Interpreting memory list: {memory_str}")
         # 渲染当前对话者的社交关系契约
         relation_str = self._format_relationship_context(avatar_state)
         # get real-person reply style
@@ -286,6 +325,8 @@ Background Core Lore: {core_lore}
 
 ### HARD-WIRED PERSONALITY TRAITS & BIOLOGICAL LIMITS
 {trait_str}
+### EPISODIC & SEMANTIC MEMORY BANK (核心事实与经历记忆库)
+{memory_str}
 
 ### INTERLOCUTOR & RELATIONAL CONTEXT (当前对话者与社会关系契约)
 {relation_str}

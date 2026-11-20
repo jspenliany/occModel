@@ -73,7 +73,7 @@ class PsiAvatar:
         """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
         logger.debug(f"get_common_chat_payload  context: {context}  user_input: {user_input} speaker_id: {speaker_id}")
         current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
-        system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list)
+        system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list,self.core_memories)
         logger.debug(f"get_response_payload system_prompt: {system_prompt}")
 
         # 把 speaker_id 同步记录进对话历史
