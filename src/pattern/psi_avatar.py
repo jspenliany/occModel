@@ -220,38 +220,28 @@ class PsiAvatar:
                     break
 
             if matched_mem is not None:
-                # 🌟 2. 记忆强化与可信度升级机制（例如：原本是梦境/传闻，后来变成了亲身经历）
-                if isinstance(matched_mem, dict):
-                    old_cred = float(matched_mem.get("credibility", 0.5))
-                    if credibility > old_cred:
-                        logger.info(
-                            f"📈 [记忆可信度升级] '{fact}' 可信度从 {old_cred} 提升至 {credibility} ({mem_type})")
-                        matched_mem["credibility"] = credibility
-                        matched_mem["memory_type"] = mem_type
-                        matched_mem["fact_summary"] = fact  # 更新为更准确的事实描述
-                    matched_mem["mention_count"] = matched_mem.get("mention_count", 1) + 1
-                    matched_mem["last_updated"] = update_time
-                else:
-                    # 若为 CoreMemoryNode 对象
-                    old_cred = float(getattr(matched_mem, "credibility", 0.5))
-                    if credibility > old_cred and hasattr(matched_mem, "credibility"):
-                        matched_mem.credibility = credibility
-                    if hasattr(matched_mem, "mention_count"):
-                        matched_mem.mention_count += 1
+                # 记忆强化与可信度升级（如梦境/传闻被亲历证实）
+                if credibility > matched_mem.credibility:
+                    logger.info(
+                        f"📈 [记忆可信度升级] '{fact}' 可信度从 {matched_mem.credibility} 提升至 {credibility} ({mem_type})")
+                    matched_mem.credibility = credibility
+                    matched_mem.memory_type = mem_type
+                    matched_mem.fact_summary = fact
+                matched_mem.mention_count += 1
+                matched_mem.last_updated = update_time
             else:
-                # 🌟 3. 全新精细化记忆节点入库
-                new_entry = {
-                    "fact_summary": fact,
-                    "memory_type": mem_type,
-                    "credibility": credibility,
-                    "perspective_focus": perspective,
-                    "involved_entities": entities,
-                    "time_indicator": time_ind,
-                    "mention_count": 1,
-                    "created_at": update_time,
-                    "last_updated": update_time
-                }
-                self.core_memories.append(new_entry)
+                new_node = CoreMemoryNode(
+                    fact_summary=fact,
+                    memory_type=mem_type,
+                    credibility=credibility,
+                    perspective_focus=perspective,
+                    involved_entities=entities,
+                    time_indicator=time_ind,
+                    mention_count=1,
+                    created_at=update_time,
+                    last_updated=update_time
+                )
+                self.core_memories.append(new_node)
                 has_new = True
                 logger.info(f"📖 新增精细化记忆节点 [{mem_type} | 可信度:{credibility}]: {fact}")
 
@@ -345,7 +335,7 @@ class PsiAvatar:
 
             # 4. 恢复不可磨灭的强类型核心记忆库（通过解包实例化为 CoreMemoryNode 类对象）
             raw_core_mems = archive_data.get("core_memory_bank", [])
-            self.core_memories = [CoreMemoryNode(**m) for m in raw_core_mems]
+            self.core_memories = [CoreMemoryNode.from_dict(m) for m in raw_core_mems]
 
             # 5. 恢复短期近景历史对话会话存根（调用上一轮修复的强类型滑动窗口反序列化器）
             if hasattr(self.message_history, 'load_history') and "chat_history" in archive_data:
