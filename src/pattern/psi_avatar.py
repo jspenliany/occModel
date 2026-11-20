@@ -8,6 +8,8 @@ from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam
 )
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from dataclasses import asdict
 from src.message.message_hist import AvatarChatHistory
 from src.models.memory.memory_node import CoreMemoryNode
@@ -176,13 +178,85 @@ class PsiAvatar:
         return "new_trait_found"
 
     def update_memory(self, memory_data: list, update_time: str) -> str:
+        """
+        将双轨提取出的精细化记忆节点进行去重合并、可信度升级（如传闻被亲历证实）并存入 self.core_memories
+        """
         if not memory_data:
             return "no_memory_found"
 
-        # 🌟 1：统一将输入转化为列表，支持单节点和多节点的遍历
         chunks_to_process = memory_data if isinstance(memory_data, list) else [memory_data]
+        has_new = False
 
-        return "new_memory_found"
+        for chunk in chunks_to_process:
+            if not isinstance(chunk, dict):
+                continue
+
+            fact = chunk.get("fact_summary", "").strip()
+            if not fact:
+                continue
+
+            mem_type = chunk.get("memory_type", "episodic_experiential")
+            credibility = float(chunk.get("credibility", 0.8))
+            perspective = chunk.get("perspective_focus", "first_person")
+            entities = [str(e).lower() for e in chunk.get("involved_entities", [])]
+            time_ind = chunk.get("time_indicator", "past")
+
+            # 🌟 1. 基于【记忆本体类型 + 核心实体集合 + 事实文本】构建去重检索
+            matched_mem = None
+            new_entity_set = set(entities)
+
+            for existing in self.core_memories:
+                # 兼容 existing 为 dataclass 实例或纯 dict
+                ex_dict = asdict(existing) if hasattr(existing, "__dataclass_fields__") else existing
+                ex_fact = ex_dict.get("fact_summary", "")
+                ex_entities = set(ex_dict.get("involved_entities", []))
+
+                # 判定同一件事：事实文本完全相同，或核心实体高度重合且描述高度相似
+                is_same_fact = (ex_fact == fact) or (
+                        new_entity_set and new_entity_set == ex_entities and (fact in ex_fact or ex_fact in fact)
+                )
+                if is_same_fact:
+                    matched_mem = existing
+                    break
+
+            if matched_mem is not None:
+                # 🌟 2. 记忆强化与可信度升级机制（例如：原本是梦境/传闻，后来变成了亲身经历）
+                if isinstance(matched_mem, dict):
+                    old_cred = float(matched_mem.get("credibility", 0.5))
+                    if credibility > old_cred:
+                        logger.info(
+                            f"📈 [记忆可信度升级] '{fact}' 可信度从 {old_cred} 提升至 {credibility} ({mem_type})")
+                        matched_mem["credibility"] = credibility
+                        matched_mem["memory_type"] = mem_type
+                        matched_mem["fact_summary"] = fact  # 更新为更准确的事实描述
+                    matched_mem["mention_count"] = matched_mem.get("mention_count", 1) + 1
+                    matched_mem["last_updated"] = update_time
+                else:
+                    # 若为 CoreMemoryNode 对象
+                    old_cred = float(getattr(matched_mem, "credibility", 0.5))
+                    if credibility > old_cred and hasattr(matched_mem, "credibility"):
+                        matched_mem.credibility = credibility
+                    if hasattr(matched_mem, "mention_count"):
+                        matched_mem.mention_count += 1
+            else:
+                # 🌟 3. 全新精细化记忆节点入库
+                new_entry = {
+                    "fact_summary": fact,
+                    "memory_type": mem_type,
+                    "credibility": credibility,
+                    "perspective_focus": perspective,
+                    "involved_entities": entities,
+                    "time_indicator": time_ind,
+                    "mention_count": 1,
+                    "created_at": update_time,
+                    "last_updated": update_time
+                }
+                self.core_memories.append(new_entry)
+                has_new = True
+                logger.info(f"📖 新增精细化记忆节点 [{mem_type} | 可信度:{credibility}]: {fact}")
+
+        # 同步调整 export_avatar_state 中的序列化兼容（兼容 dict 与 dataclass）
+        return "new_memory_found" if has_new else "memory_reinforced"
 
     def append_new_trait(self, trait_text: str) -> str:
         logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
@@ -217,7 +291,7 @@ class PsiAvatar:
             },
             "psi_live_state": engine_snapshot,
             "trait_memory_bank": self.trait_list,  # 持久化特质库
-            "core_memory_bank": [asdict(m) for m in self.core_memories],   # 核心记忆库
+            "core_memory_bank": [asdict(m) if hasattr(m, "__dataclass_fields__") else m for m in self.core_memories],   # 核心记忆库
             "chat_history": self.message_history.export_history() if hasattr(self.message_history,
                                                                              'export_history') else []
         }
