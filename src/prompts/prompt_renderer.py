@@ -1,6 +1,7 @@
 ### filename: prompt_renderer.py
 from src.logger_singleton import logger
 from src.pattern.lore_factory import DynamicLoreFactory
+from dataclasses import asdict
 
 class LLMPromptRenderer:
     """
