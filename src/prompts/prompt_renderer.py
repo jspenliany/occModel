@@ -1,6 +1,7 @@
 ### filename: prompt_renderer.py
 from src.logger_singleton import logger
 from src.pattern.lore_factory import DynamicLoreFactory
+from dataclasses import asdict
 
 class LLMPromptRenderer:
     """
@@ -201,12 +202,12 @@ class LLMPromptRenderer:
 
         max_pos_emo, max_pos_val = max(
             ((emo, active_emotions.get(emo, 0.0)) for emo in positive_pool),
-            key=lambda x: x,
+            key=lambda x: x[1],
             default=("Joy", 0.0)
         )
         max_neg_emo, max_neg_val = max(
             ((emo, active_emotions.get(emo, 0.0)) for emo in negative_pool),
-            key=lambda x: x,
+            key=lambda x: x[1],
             default=("Anger", 0.0)
         )
 
