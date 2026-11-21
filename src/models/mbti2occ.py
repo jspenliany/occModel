@@ -20,16 +20,18 @@ class MBTIToOCCEngine:
         """
         Converts an MBTI string (e.g., 'INFP-T', 'INTJ-A') to an OCEAN profile.
         Values range between 0.0 and 1.0.
-        已重构：完美对接具有长命名属性的全新 TraitRangeConfig 声明式配置中心
         """
         logger.debug('Converting MBTI to OCEAN...begin')
         clean_mbti = mbti_string.upper().strip()
 
-        # 1. 解析基础 4 码和身份尾缀
-        if '-' in clean_mbti:
-            base_mbti, suffix = clean_mbti.split('-')
+        # 1. 解析基础 4 码与身份尾缀
+        if "-" in clean_mbti:
+            parts = clean_mbti.split("-")
+            base_mbti = parts[0]
+            suffix = parts[1] if len(parts) > 1 else ""
         else:
-            base_mbti, suffix = clean_mbti, 'A'  # 缺省标准兜底
+            base_mbti = clean_mbti
+            suffix = ""
 
         if len(base_mbti) != 4:
             logger.error('Invalid MBTI string: {}'.format(mbti_string))
@@ -39,24 +41,28 @@ class MBTIToOCCEngine:
         ranges = cfg.mbti_ranges
         default_range = ranges.DEFAULT
 
-        # 2. 🌟 核心显式解耦映射字典
-        # 将 MBTI 的原生单字母，精准映射到全新配置类中的 `mbti_X` 长命名属性上
+        # 2. 核心显式解耦映射字典
         mbti_property_map = {
-            'E': 'mbti_E', 'I': 'mbti_I',  # 维度一：注意力方向 -> 外倾(E)/内倾(I)
-            'N': 'mbti_N', 'S': 'mbti_S',  # 维度二：认知方式 -> 直觉(N)/感觉(S) -> 💡 绝不再与大五人格 N 冲突！
-            'F': 'mbti_F', 'T': 'mbti_T',  # 维度三：决策方式 -> 情感(F)/思考(T)
-            'J': 'mbti_J', 'P': 'mbti_P',  # 维度四：处事倾向 -> 独立(J)/感知(P)
-            'A': 'mbti_A',  # 尾缀 A  -> 映射自我肯定型
-            'T_suffix': 'mbti_T_suffix'  # 尾缀 T  -> 映射动荡易焦虑型
+            'E': 'mbti_E', 'I': 'mbti_I',
+            'N': 'mbti_N', 'S': 'mbti_S',
+            'F': 'mbti_F', 'T': 'mbti_T',
+            'J': 'mbti_J', 'P': 'mbti_P',
+            'A': 'mbti_A',
+            'T_suffix': 'mbti_T_suffix'
         }
 
-        # 3. 提取各个轴的具体字符标识
+        # 3. 提取各个轴的具体字符标识（非法尾缀映射为 'INVALID'，触发 DEFAULT 回退）
         char_E_I = base_mbti[0]
         char_N_S = base_mbti[1]
         char_T_F = base_mbti[2]
         char_P_J = base_mbti[3]
-        # 处理尾缀名以对齐映射表
-        char_suffix = 'T_suffix' if suffix == 'T' else 'A'
+
+        if suffix == 'T':
+            char_suffix = 'T_suffix'
+        elif suffix == 'A':
+            char_suffix = 'A'
+        else:
+            char_suffix = 'INVALID'
 
         # 4. 辅助抽样闭包：安全反射配置项中的高低浮点数区间
         def _sample_range(mbti_char: str) -> float:
@@ -64,21 +70,12 @@ class MBTIToOCCEngine:
             val_range = getattr(ranges, prop_name, default_range)
             return random.uniform(*val_range)
 
-        # 5. 🌟 严格按照大五人格心理学标准，组装无二义性的规范 OCEAN 基因字典
+        # 5. 组装规范 OCEAN 基因字典
         ocean = {
-            # O (Openness 开放性) <- 对应 MBTI 的直觉/感觉 (N/S)
             "O": _sample_range(char_N_S),
-
-            # C (Conscientiousness 尽责性) <- 对应 MBTI 的判断/感知 (J/P)
             "C": _sample_range(char_P_J),
-
-            # E (Extraversion 外倾性) <- 对应 MBTI 的外倾/内倾 (E/I)
             "E": _sample_range(char_E_I),
-
-            # A (Agreeableness 宜人性) <- 对应 MBTI 的情感/思考 (F/T)
             "A": _sample_range(char_T_F),
-
-            # N (Neuroticism 神经质) <- 对应 MBTI 的身份尾缀 (-T/-A)
             "N": _sample_range(char_suffix)
         }
 

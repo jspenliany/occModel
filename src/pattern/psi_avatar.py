@@ -298,17 +298,13 @@ class PsiAvatar:
             self.character_name = metadata.get("character_name", self.character_name)
             self.profession = metadata.get("profession", self.profession)
 
-            # 提取元数据中的基因锚点（MBTI & OCEAN），便于引擎强制对齐
             mbti = metadata.get("mbti", "UNKNOWN")
             ocean_dna = metadata.get("ocean_dna", {})
 
             # 2. 强行灌入来自 engine.to_dict() 的全量运行时图谱变量
-            # 此时的 live_state 包含更深层的未舍入浮点数及 counters / flags 快照
             live_state = archive_data.get("psi_live_state", {})
 
-            # 优先使用强同步接口，将元数据设定与运行时状态树一同揉碎灌入底层各个子 Layer
             if hasattr(self.engine, "force_sync_state"):
-                # 组装强同步 payload，确保底层能同步恢复状态图谱与计数器
                 full_sync_payload = {
                     "mbti": mbti,
                     "ocean_dna": ocean_dna,
@@ -316,105 +312,45 @@ class PsiAvatar:
                 }
                 self.engine.force_sync_state(full_sync_payload)
             else:
-                # 兜底隐式覆写：若底层没有提供强同步 broker，则手动向下水管道属性直接灌入
                 logger.warning(
                     "PSI Engine lacks direct force_sync_state method. Attempting regular property hydration.")
-                # 恢复基础性格特征
                 if hasattr(self.engine, 'p_layer'):
                     self.engine.p_layer.mbti = mbti
                     self.engine.p_layer.ocean = ocean_dna
-
-                # 恢复隐藏标志位与演进计数器（依据底层 bridge 的设计决定）
                 if "anger_habit_counter" in live_state:
                     self.engine.anger_habit_counter = live_state["anger_habit_counter"]
                 if "in_hardship_flag" in live_state:
                     self.engine.in_hardship_flag = live_state["in_hardship_flag"]
 
-            # 3. 恢复静态特质知识库（已经是纯 dict 列表，安全）
+            # 3. 恢复静态特质知识库
             self.trait_list = archive_data.get("trait_memory_bank", [])
 
-            # 4. 恢复不可磨灭的强类型核心记忆库（通过解包实例化为 CoreMemoryNode 类对象）
+            # 4. 恢复强类型核心记忆库
             raw_core_mems = archive_data.get("core_memory_bank", [])
             self.core_memories = [CoreMemoryNode.from_dict(m) for m in raw_core_mems]
 
-            # 5. 恢复短期近景历史对话会话存根（调用上一轮修复的强类型滑动窗口反序列化器）
+            # 5. 🌟 融合第二个方法的亮点：防御性清洗对话历史时间戳后再交由 message_history 加载
             if hasattr(self.message_history, 'load_history') and "chat_history" in archive_data:
-                self.message_history.load_history(archive_data["chat_history"])
+                hydrated_history = []
+                for turn in archive_data["chat_history"]:
+                    clean_turn = dict(turn)
+                    ts_raw = clean_turn.get("timestamp")
+                    if isinstance(ts_raw, str):
+                        try:
+                            clean_turn["timestamp"] = datetime.fromisoformat(ts_raw)
+                        except ValueError:
+                            try:
+                                dt = datetime.strptime(ts_raw, "%Y-%m-%d %H:%M:%S")
+                                clean_turn["timestamp"] = dt.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+                            except Exception:
+                                clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
+                    elif not isinstance(ts_raw, datetime):
+                        clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
+                    hydrated_history.append(clean_turn)
+
+                self.message_history.load_history(hydrated_history)
 
             logger.info(f"Avatar [{self.character_name}] state and personality metadata successfully reloaded.")
         except Exception as e:
             logger.error(f"Critical error while loading avatar state for {self.character_name}: {e}")
-            raise e
-
-    def load_avatar_state(self, archive_data: dict) -> None:
-        """
-        Deep re-hydration of the digital soul's memory state graph.
-        Defensively parses serialised ISO string timestamps back into timezone-aware datetimes.
-        """
-        try:
-            logger.info(f"Initiating state hydration graph for avatar: {self.get_charactor_name()}")
-
-            # 1. Recover core operational profiles & system structural layers
-            # Assuming your existing bridge instantiation or sync looks like this:
-            if "psi_live_state" in archive_data:
-                # If your PSI3DGlassBridge has force_sync_state implemented:
-                if hasattr(self, "psi_engine") and self.psi_engine:
-                    self.psi_engine.force_sync_state(archive_data["psi_live_state"])
-                else:
-                    logger.error(f"psi_engine not found in psi_live_state: {archive_data}")
-            else:
-                logger.error(f"psi_live_state not found in archive_data: {archive_data}")
-
-            # 2. Re-hydrate banks
-            if "trait_memory_bank" in archive_data:
-                self.trait_memory_bank = archive_data["trait_memory_bank"]
-            else:
-                logger.error(f"trait_memory_bank not found in archive_data: {archive_data}")
-            if "core_memory_bank" in archive_data:
-                self.core_memory_bank = archive_data["core_memory_bank"]
-            else:
-                logger.error(f"core_memory_bank not found in archive_data: {archive_data}")
-
-            # 3. 🌟 CORE PATCH: Defensive Chat History Timeline Re-hydration
-            raw_history = archive_data.get("chat_history", [])
-            hydrated_history = []
-
-            for turn in raw_history:
-                # Defensively copy the dictionary payload to avoid modifying unexpected references
-                clean_turn = {k: v for k, v in turn.items()}
-
-                timestamp_raw = clean_turn.get("timestamp")
-
-                if timestamp_raw:
-                    if isinstance(timestamp_raw, str):
-                        try:
-                            # 1. Standard ISO-8601 parser (handles "+08:00" offsets automatically)
-                            clean_turn["timestamp"] = datetime.fromisoformat(timestamp_raw)
-                        except ValueError:
-                            try:
-                                # 2. Fallback parser for legacy formats missing explicit standard structures
-                                clean_turn["timestamp"] = datetime.strptime(timestamp_raw, "%Y-%m-%d %H:%M:%S")
-                                # Fall back safely to target system timezone configuration if offset is completely stripped
-                                clean_turn["timestamp"] = clean_turn["timestamp"].replace(
-                                    tzinfo=ZoneInfo("Asia/Shanghai")
-                                )
-                            except Exception as inner_e:
-                                logger.error(f"Failed parsing string timestamp '{timestamp_raw}': {inner_e}")
-                                # Secondary safety net: fallback directly to system execution wall clock time
-                                clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
-                    elif isinstance(timestamp_raw, datetime):
-                        # Safeguard in case payload already contains runtime objects
-                        pass
-                else:
-                    # Tertiary safety net if data keys are corrupted or absent
-                    clean_turn["timestamp"] = datetime.now(ZoneInfo("Asia/Shanghai"))
-
-                hydrated_history.append(clean_turn)
-
-            # Assign fully verified timeline graph back to runtime memory context
-            self.chat_history = hydrated_history
-            logger.info(f"Successfully re-hydrated {len(hydrated_history)} historical turns into state memory.")
-
-        except Exception as e:
-            logger.critical(f"Fatal error during cold re-hydration of agent state data: {e}")
             raise e
