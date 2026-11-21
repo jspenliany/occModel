@@ -42,3 +42,6 @@ class CoreMemoryNode:
             filtered_data["fact_summary"] = data.get("content") or data.get("summary", "")
         return cls(**filtered_data)
 
+    def get(self, key: str, default: Any = None) -> Any:
+        """提供字典风格的 .get() 兼容访问，防止调用方误当 dict 处理时报错"""
+        return getattr(self, key, default)
