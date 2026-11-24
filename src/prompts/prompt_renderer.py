@@ -311,7 +311,7 @@ class LLMPromptRenderer:
         if memories_list:
             logger.debug(f"memories_list...size = {len(memories_list)}")
             sorted_memories = sorted(memories_list, key=lambda x: x.get("mention_count", 1), reverse=True)
-            memory_str = "\n".join([self._format_memories(t) for t in sorted_memories])
+            memory_str = "\n".join(self._format_memories(sorted_memories))
             logger.debug(f"Interpreting memory list: {memory_str}")
         # 渲染当前对话者的社交关系契约
         relation_str = self._format_relationship_context(avatar_state)
