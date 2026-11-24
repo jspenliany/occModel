@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from dataclasses import asdict
 from src.message.message_hist import AvatarChatHistory
 from src.models.memory.memory_node import CoreMemoryNode
+from src.models.psi.appraiser import CognitiveAppraiser
 
 
 class PsiAvatar:
@@ -33,11 +34,23 @@ class PsiAvatar:
         self.trait_list = []
         self.core_memories: list[CoreMemoryNode] = []
         self.message_history = AvatarChatHistory()
+        self.appraiser = CognitiveAppraiser(
+            model_name="google/gemma-4-31b-it"
+        )
 
     def get_reflect_payload(self, context: str, user_input: str, speaker_id: str = "unknown_stranger") -> list:
         """生成用于让大模型评估情感冲击（OCC Delta）的请求 Payload"""
         current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
-        reflect_prompt = self.renderer.render_reflect_prompt(current_state)
+        # 收到用户消息时评估（默认直接返回与 PSI3DGlassBridge 100% 兼容的 8 维 OCC 字典）
+        occ_appraisal = self.appraiser.appraise(
+            user_input="user_input",
+            user_plans=[{"plan_id": "p1", "title": "完成版本发布", "importance": 0.8}],
+        )
+        logger.debug(f"8 维 OCC 字典...occ_appraisal : {occ_appraisal}")
+        # 导出可拼接到下游角色 System Prompt 的内生动机与当前自我议程片段
+        agenda_prompt_block = self.appraiser.render_autonomous_agenda_prompt()
+        logger.debug(f"内生动机...agenda_prompt_block : {agenda_prompt_block}")
+        reflect_prompt = self.renderer.render_reflect_prompt(current_state,agenda_prompt_block)
         logger.debug(f"get_reflect_payload  reflect_prompt: {reflect_prompt}")
         return [
             ChatCompletionSystemMessageParam(role="system", content=reflect_prompt),
@@ -65,7 +78,8 @@ class PsiAvatar:
         self.engine.receive_user_stimulus(appraisal_data, speaker_id=speaker_id)
         self.engine.update_system_clock()
         new_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
-
+        # 2. 静默期心跳驱动（没人说话时也能生长欲望并决定是否主动搭话）
+        proposal = self.appraiser.tick_idle_and_propose(elapsed_minutes=128)
         logger.debug(
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
