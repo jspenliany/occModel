@@ -278,7 +278,7 @@ class PsiAvatar:
         # 同步调整 export_avatar_state 中的序列化兼容（兼容 dict 与 dataclass）
         return "new_memory_found" if has_new else "memory_reinforced"
 
-    def append_new_trait(self, trait_text: str) -> str:
+    def append_new_trait(self, trait_text: str, temperature: float=0.15) -> str:
         logger.debug(f"append_new_trait trait_text: {trait_text}...begin")
         message_list = self.get_trait_payload("", trait_text)
         if self.trait_factory is None:
@@ -286,7 +286,7 @@ class PsiAvatar:
             return trait_text
 
         # 1. 通过大模型获取规范化的特质节点列表
-        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=0.15)
+        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=temperature)
         # 安全提取大模型吐出的元数据参数
         new_trait_list = trait_node.get("normalized_params")
         trait_time = trait_node.get("timestamp")

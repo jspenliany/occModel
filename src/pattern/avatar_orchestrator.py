@@ -82,13 +82,13 @@ class AvatarOrchestrator:
                 responses[key] = f"Generation Error: {e}"
         return responses
 
-    def chat_turn(self, key: str, context: str, user_message: str, speaker_id: str = "unknown_stranger", temperature: float = 0.4) -> str:
+    def chat_turn(self, key: str, context: str, user_message: str, speaker_id: str = "unknown_stranger", reflect_tempe: float = 0.15, system_tempe: float = 0.75) -> str:
         avatar = self.avatars[key]
 
         # 1. 情感反射阶段：让 LLM 评估当前事件对该角色的 OCC 冲击
         reflect_payload = avatar.get_reflect_payload(context, user_message, speaker_id=speaker_id)
         response = self.llm_client.chat.completions.create(
-            model=self.model_name, messages=reflect_payload, temperature=0.15
+            model=self.model_name, messages=reflect_payload, temperature=reflect_tempe
         )
         appraisal_data = extract_and_parse_json(response.choices[0].message.content.strip())
 
@@ -98,11 +98,11 @@ class AvatarOrchestrator:
         # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复（内生议程已在 get_common_chat_payload 内统一收口）
         chat_payload = avatar.get_common_chat_payload(context, user_message, speaker_id=speaker_id)
         chat_response = self.llm_client.chat.completions.create(
-            model=self.model_name, messages=chat_payload, temperature=0.7
+            model=self.model_name, messages=chat_payload, temperature=system_tempe
         )
         return chat_response.choices[0].message.content.strip()
 
-    def append_trait(self, key: str, trait_text: str) -> dict:
+    def append_trait(self, key: str, trait_text: str,trait_temp=0.15) -> dict:
         """添加特质"""
         logger.debug(f"Appending {key} to trait text: {trait_text}...begin")
         if key not in self.avatars:
@@ -110,7 +110,7 @@ class AvatarOrchestrator:
             return {}
 
         if self.avatars[key]:
-            self.avatars[key].append_new_trait(trait_text)
+            self.avatars[key].append_new_trait(trait_text,temperature=trait_temp)
         logger.debug(f"Successfully appended {key} to trait text: {trait_text}")
         return {}
 
