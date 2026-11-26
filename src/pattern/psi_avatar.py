@@ -84,10 +84,20 @@ class PsiAvatar:
             f"[{self.character_name} ({self.engine.p_layer.mbti})] OCC State Changed:\nBefore: {old_state}\nAfter: {new_state}")
 
     def get_common_chat_payload(self, context: str, user_input: str, speaker_id: str = "unknown_stranger") -> list:
-        """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload"""
+        """基于内化后的新状态，生成用于最终对话回复的 Prompt Payload（统一收口注入内生动机与自我目标议程）"""
         logger.debug(f"get_common_chat_payload  context: {context}  user_input: {user_input} speaker_id: {speaker_id}")
         current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
-        system_prompt = self.renderer.render_system_prompt(current_state, self.trait_list,self.core_memories)
+        agenda_block = (
+            self.appraiser.render_autonomous_agenda_prompt()
+            if hasattr(self, "appraiser") and self.appraiser is not None
+            else ""
+        )
+        system_prompt = self.renderer.render_system_prompt(
+            current_state,
+            self.trait_list,
+            self.core_memories,
+            agenda_prompt_block=agenda_block,
+        )
         logger.debug(f"get_response_payload system_prompt: {system_prompt}")
 
         # 把 speaker_id 同步记录进对话历史
@@ -103,6 +113,12 @@ class PsiAvatar:
                 content=f"<context>{context}</context>\n<user_input>{user_input}</user_input>"
             ),
         ]
+
+    def render_autonomous_agenda_prompt(self) -> str:
+        """代理暴露内生动机与自我目标议程片段，兼容外部按需读取"""
+        if hasattr(self, "appraiser") and self.appraiser is not None:
+            return self.appraiser.render_autonomous_agenda_prompt()
+        return ""
 
     def get_charactor_name(self) -> str:
         return self.character_name

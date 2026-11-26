@@ -326,7 +326,13 @@ class LLMPromptRenderer:
             f"or guarded, NEVER falsely accuse, judge, or misdirect that third-party hostility at the current speaker.\n"
         )
 
-    def render_system_prompt(self, avatar_state: dict, trait_list: list = None, memories_list: list = None) -> str:
+    def render_system_prompt(
+        self,
+        avatar_state: dict,
+        trait_list: list = None,
+        memories_list: list = None,
+        agenda_prompt_block: str = "",
+    ) -> str:
         """
         Main interface method:
         Generates the final comprehensive System Prompt string injected directly into the LLM API.
@@ -399,6 +405,8 @@ Background Core Lore: {core_lore}
             system_prompt += "   - [Active Spike] None (Emotional baseline is calm/neutral)\n"
         if lingering_desc:
             system_prompt += lingering_desc
+        if agenda_prompt_block:
+            system_prompt += f"\n{agenda_prompt_block}\n"
 
         system_prompt += f"""
 ### SYSTEM DIALOGUE OUTPUT RULES

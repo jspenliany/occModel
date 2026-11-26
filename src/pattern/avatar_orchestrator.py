@@ -71,7 +71,7 @@ class AvatarOrchestrator:
         for key, avatar in self.avatars.items():
             logger.info(f"Processing {key} character_name {avatar.get_charactor_name()} profession {avatar.get_profession()}  speaker_id {speaker_id}")
             try:
-                messages = avatar.get_common_chat_payload(context,user_message)
+                messages = avatar.get_common_chat_payload(context, user_message, speaker_id=speaker_id)
                 response = self.llm_client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,
@@ -95,11 +95,8 @@ class AvatarOrchestrator:
         # 2. 状态内化与时钟演进阶段（让心理时钟真正 Tick 起来！）
         avatar.apply_appraisal_and_tick(appraisal_data, speaker_id=speaker_id)
 
-        # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复
+        # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复（内生议程已在 get_common_chat_payload 内统一收口）
         chat_payload = avatar.get_common_chat_payload(context, user_message, speaker_id=speaker_id)
-        # 4. 把“内生动机与当前主导目标”追加进 System Prompt 末尾
-        agenda_block = avatar.render_autonomous_agenda_prompt()
-        chat_payload[0]["content"] += f"\n\n{agenda_block}"
         chat_response = self.llm_client.chat.completions.create(
             model=self.model_name, messages=chat_payload, temperature=temperature
         )
