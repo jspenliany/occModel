@@ -97,6 +97,9 @@ class AvatarOrchestrator:
 
         # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复
         chat_payload = avatar.get_common_chat_payload(context, user_message, speaker_id=speaker_id)
+        # 4. 把“内生动机与当前主导目标”追加进 System Prompt 末尾
+        agenda_block = avatar.render_autonomous_agenda_prompt()
+        chat_payload[0]["content"] += f"\n\n{agenda_block}"
         chat_response = self.llm_client.chat.completions.create(
             model=self.model_name, messages=chat_payload, temperature=temperature
         )
