@@ -256,11 +256,27 @@ class LLMPromptRenderer:
         if not memories:
             return "None"
 
-        # 兼容 dict 与 dataclass，按 (可信度 * 0.7 + 提及频次 * 0.3) 排序，保留最核心记忆防 Prompt 过载
-        normalized = [asdict(m) if hasattr(m, "__dataclass_fields__") else m for m in memories]
+        if not isinstance(memories, list):
+            memories = [memories]
+
+        # 兼容 dict、dataclass 与普通对象，按 (可信度 * 0.7 + 提及频次 * 0.3) 排序，保留最核心记忆防 Prompt 过载
+        normalized = []
+        for m in memories:
+            if isinstance(m, dict):
+                normalized.append(m)
+            elif hasattr(m, "__dataclass_fields__"):
+                normalized.append(asdict(m))
+            elif hasattr(m, "to_dict"):
+                normalized.append(m.to_dict())
+            elif hasattr(m, "__dict__"):
+                normalized.append(vars(m))
+
+        if not normalized:
+            return "None"
+
         sorted_mems = sorted(
             normalized,
-            key=lambda x: (float(x.get("credibility", 0.5)) * 0.7 + min(x.get("mention_count", 1), 5) * 0.06),
+            key=lambda x: (float(x.get("credibility", 0.5)) * 0.7 + min(int(x.get("mention_count", 1)), 5) * 0.06),
             reverse=True
         )[:max_items]
 
@@ -281,6 +297,35 @@ class LLMPromptRenderer:
 
         return "\n".join(lines)
 
+    def _format_external_lingering_emotions(self, avatar_state: dict) -> str:
+        """
+        渲染针对第三方（非当前说话人）的未消退负面人际余波指令：
+        防止把对同事/外人的嫌弃和怒火错怪到眼前的对话者头上，并在高亲密伴侣面前自然转化为“吐槽外人”。
+        """
+        lingering = avatar_state.get("external_lingering_emotions", {})
+        if not lingering:
+            return ""
+
+        parts = []
+        for other_uid, emos in lingering.items():
+            emo_pairs = ", ".join(f"{k}={v:.2f}" for k, v in emos.items())
+            parts.append(f"'{other_uid}' ({emo_pairs})")
+        summary = "; ".join(parts)
+
+        intimacy = avatar_state.get("active_relationship", {}).get("intimacy", 0.0)
+        if intimacy >= 0.7:
+            return (
+                f"   - [EXTERNAL EMOTIONAL RESIDUE - DO NOT MISDIRECT]: You are still carrying lingering friction toward "
+                f"OTHER people [{summary}], NOT toward your current close interlocutor. NEVER blame, despise, or project "
+                f"hostility onto the current speaker; because you are very close to them, you may naturally let out a brief "
+                f"sigh or casually vent about being annoyed by someone else earlier if fitting.\n"
+            )
+        return (
+            f"   - [EXTERNAL EMOTIONAL RESIDUE - DO NOT MISDIRECT]: You are still carrying lingering friction toward "
+            f"OTHER people [{summary}], NOT toward your current interlocutor. While your general mood may remain low-energy "
+            f"or guarded, NEVER falsely accuse, judge, or misdirect that third-party hostility at the current speaker.\n"
+        )
+
     def render_system_prompt(self, avatar_state: dict, trait_list: list = None, memories_list: list = None) -> str:
         """
         Main interface method:
@@ -292,6 +337,7 @@ class LLMPromptRenderer:
         # 🌟 优化：直接将扁平化的 avatar_state 传入心情解析器
         mood_desc = self._interpret_mood(avatar_state)
         emotion_desc = self._interpret_dominant_emotions(avatar_state.get("active_emotions", {}))
+        lingering_desc = self._format_external_lingering_emotions(avatar_state)
 
         # Format the continuous traits list cleanly for downstream context
         ocean_dna = avatar_state.get("ocean_dna", {})
@@ -310,8 +356,7 @@ class LLMPromptRenderer:
         memory_str = "None"
         if memories_list:
             logger.debug(f"memories_list...size = {len(memories_list)}")
-            sorted_memories = sorted(memories_list, key=lambda x: x.get("mention_count", 1), reverse=True)
-            memory_str = self._format_memories(sorted_memories)
+            memory_str = self._format_memories(memories_list)
             logger.debug(f"Interpreting memory list: {memory_str}")
         # 渲染当前对话者的社交关系契约
         relation_str = self._format_relationship_context(avatar_state)
@@ -352,6 +397,8 @@ Background Core Lore: {core_lore}
                 system_prompt += f"   - [Active Spike] {desc}\n"
         else:
             system_prompt += "   - [Active Spike] None (Emotional baseline is calm/neutral)\n"
+        if lingering_desc:
+            system_prompt += lingering_desc
 
         system_prompt += f"""
 ### SYSTEM DIALOGUE OUTPUT RULES
@@ -411,7 +458,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
 
-    def render_reflect_prompt(self, avatar_state: dict, agenda_prompt_block: str="unset") -> str:
+    def render_reflect_prompt(self, avatar_state: dict) -> str:
         """
         external input affect occ model:
         reflect message content into occ values (with relational calibration).
@@ -440,16 +487,6 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
             "equal": "双方处于平等社会地位，完全按客观标准与亲密度进行评估。"
         }.get(power, "双方处于平等社会地位，完全按客观标准与亲密度进行评估。")
 
-        # 🌟 动态组装内生动机与自我目标树增强块（兼容未传入时的旧逻辑）
-        has_agenda = bool(agenda_prompt_block and agenda_prompt_block != "unset")
-        agenda_section = f"\n{agenda_prompt_block}\n" if has_agenda else ""
-        agenda_rule = (
-            "4. **内生动机与自我目标校准（影响 `desirability` 与 `future_desirability`）**：\n"
-            "   - 若用户输入顺应、推进了当前的 `Active Autonomous Goal`，或缓解了标有 `[CRITICAL]` 的高危内生匮乏（如极度疲劳时获准休息、孤独时得到真诚陪伴、好奇时获得深度解答、失控时理清秩序），`desirability` 应额外向正向倾斜（+0.2 ~ +0.5）。\n"
-            "   - 若在生理疲劳极高时仍被强塞繁琐消耗，或当前主导意图遭到粗暴打断与敷衍，即便话题本身符合平时职业习惯，`desirability` 也必须偏向负值。"
-            if has_agenda else ""
-        )
-
         reflect_prompt = f"""
         # ROLE
 你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，结合【当前对话者的社会关系契约】，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
@@ -458,8 +495,8 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 - 名字: {self.character_name} ({avatar_state.get("profession", "manager")})
 - 基础人格 (MBTI): {mbti}
 - 核心背景 (Background Core Lore): {core_lore} 
-# 提示：请结合上述静态 Core Lore（长期价值观）与下方的动态内生状态（当下生理水位与心事），共同作为评估事件利弊的主观准则。
-#{agenda_section}
+# 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
+
 # INTERLOCUTOR RELATIONAL CONTRACT (当前说话人社会关系契约 - 极其重要)
 - 关系身份: {rel_type.upper()}
 - 亲密度基准 (Intimacy): {intimacy} (范围 -1.0 到 1.0)
@@ -473,7 +510,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
    - 若亲密度高（`Intimacy >= 0.7`，如伴侣/挚友）：对方拥有极高的语言豁免权。调侃、喊亲昵称呼（如“宝”、“媳妇”）、开玩笑互损**绝不视为冒犯**（`blameworthiness` 应保持 `0.0` 或微正，`appealingness` 偏正）；但若是伴侣的冷漠、否定或指责，则情感痛感极深（`desirability` 需给出更深的负值）。
    - 若亲密度低（`Intimacy < 0.3`，如陌生人/普通同事）：对越界行为**零容错**。一旦出现突兀的亲昵称呼、冒犯性玩笑或过度打探隐私，必须判定为严重越界冒犯（`blameworthiness` 给出 `-0.5` 到 `-0.9`，`appealingness` 为负）。
 3. **权力结构校准**：{power_calibration}
-{agenda_rule}
+
 # OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
 请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
 

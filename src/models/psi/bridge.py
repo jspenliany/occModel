@@ -35,9 +35,10 @@ class PSI3DGlassBridge:
         self.e_layer.calculate_occ_spikes(appraisal_data, self.p_layer, self.m_layer, speaker_id=speaker_id)
 
         # 第二步：【行为->习惯->观念的自循环】
-        # 🌟 优化：无论是愤怒(Anger)还是深深的无力悲伤(Distress)突破 0.5，都会高频累积为黑化习惯
-        active_anger = self.e_layer.active_emotions.get("Anger", 0.0)
-        active_distress = self.e_layer.active_emotions.get("Distress", 0.0)
+        # 🌟 优化：无论是针对当前刺激源的愤怒(Anger)还是深深的无力悲伤(Distress)突破 0.5，都会高频累积为黑化习惯
+        speaker_emotions = self.e_layer.get_emotions_for_speaker(speaker_id)
+        active_anger = speaker_emotions.get("Anger", 0.0)
+        active_distress = speaker_emotions.get("Distress", 0.0)
         # 检测爆发出的愤怒，如果累积成高频冲突习惯，反向污染底层观念（使其变毒舌A降、焦虑N升）
         if active_anger > 0.5 or active_distress > 0.5:
             self.anger_habit_counter += 1
@@ -77,6 +78,8 @@ class PSI3DGlassBridge:
 
     def get_current_avatar_state(self, speaker_id: str = "unknown_stranger") -> dict:
         active_rel = self.p_layer.config.social_graph.get_relation(speaker_id)
+        speaker_emotions = self.e_layer.get_emotions_for_speaker(speaker_id)
+        external_lingering = self.e_layer.get_external_lingering_emotions(exclude_speaker_id=speaker_id)
         return {
             "profession": self.profession,
             "mbti": self.p_layer.mbti,
@@ -86,7 +89,8 @@ class PSI3DGlassBridge:
             "competence": round(self.m_layer.competence, 2),
             "giving_up_rate": round(self.m_layer.giving_up_rate, 2),
             "faith_shield": round(self.m_layer.faith_shield, 2),
-            "active_emotions": {k: round(v, 2) for k, v in self.e_layer.active_emotions.items() if v > 0.0},
+            "active_emotions": {k: round(v, 2) for k, v in speaker_emotions.items() if v > 0.0},
+            "external_lingering_emotions": external_lingering,
             "active_relationship": {
                 "relation_type": active_rel.relation_type,
                 "intimacy": active_rel.intimacy_baseline,
