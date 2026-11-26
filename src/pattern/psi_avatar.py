@@ -43,7 +43,7 @@ class PsiAvatar:
         current_state = self.engine.get_current_avatar_state(speaker_id=speaker_id)
         # 收到用户消息时评估（默认直接返回与 PSI3DGlassBridge 100% 兼容的 8 维 OCC 字典）
         occ_appraisal = self.appraiser.appraise(
-            user_input="user_input",
+            user_input=user_input,
             user_plans=[{"plan_id": "p1", "title": "完成版本发布", "importance": 0.8}],
         )
         logger.debug(f"8 维 OCC 字典...occ_appraisal : {occ_appraisal}")
