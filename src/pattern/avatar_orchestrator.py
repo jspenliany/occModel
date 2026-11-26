@@ -88,7 +88,7 @@ class AvatarOrchestrator:
         # 1. 情感反射阶段：让 LLM 评估当前事件对该角色的 OCC 冲击
         reflect_payload = avatar.get_reflect_payload(context, user_message, speaker_id=speaker_id)
         response = self.llm_client.chat.completions.create(
-            model=self.model_name, messages=reflect_payload, temperature=temperature
+            model=self.model_name, messages=reflect_payload, temperature=0.15
         )
         appraisal_data = extract_and_parse_json(response.choices[0].message.content.strip())
 
@@ -98,7 +98,7 @@ class AvatarOrchestrator:
         # 3. 此时基于最新自然衰减、危机结算后的心理状态，生成文本回复（内生议程已在 get_common_chat_payload 内统一收口）
         chat_payload = avatar.get_common_chat_payload(context, user_message, speaker_id=speaker_id)
         chat_response = self.llm_client.chat.completions.create(
-            model=self.model_name, messages=chat_payload, temperature=temperature
+            model=self.model_name, messages=chat_payload, temperature=0.7
         )
         return chat_response.choices[0].message.content.strip()
 

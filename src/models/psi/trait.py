@@ -23,7 +23,7 @@ class TraitNormalizer:
         self.llm_client = llm_client
         self.model_name = model_name
 
-    def normalize_new_chunk(self, messages: list, temperature: float=0.4) -> tuple[NodeDict,NodeDict]:
+    def normalize_new_chunk(self, messages: list, temperature: float=0.15) -> tuple[NodeDict,NodeDict]:
         """
         接收散落特质碎片，通过 LLM 降维标准化，最终返回用于混合存储的完整对象
         """

@@ -286,7 +286,7 @@ class PsiAvatar:
             return trait_text
 
         # 1. 通过大模型获取规范化的特质节点列表
-        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=0.4)
+        trait_node, memory_node = self.trait_factory.normalize_new_chunk(message_list, temperature=0.15)
         # 安全提取大模型吐出的元数据参数
         new_trait_list = trait_node.get("normalized_params")
         trait_time = trait_node.get("timestamp")
