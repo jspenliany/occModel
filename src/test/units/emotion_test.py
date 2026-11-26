@@ -248,3 +248,60 @@ def test_tc07_full_serialization_round_trip(tmp_path, mock_llm_client):
     assert restored_avatar.engine.m_layer.config is restored_avatar.engine.p_layer.config
     # 4. 验证恢复后的实例继续执行刺激与时钟推进不报 AttributeError
     restored_avatar.apply_appraisal_and_tick({"desirability": 0.5, "prospect_status": "none"}, speaker_id="dad_01")
+
+
+# ==================== 8. 跨对话者人际靶向情绪隔离与第三方余怒吐槽测试 ====================
+
+def test_tc08_directed_emotion_isolation_and_lingering_residue():
+    """TC_08: 验证讨厌同事引发的 Reproach/Disliking/Anger 不会串味到伴侣身上，且正确生成第三方余波提示"""
+    from src.prompts.prompt_renderer import LLMPromptRenderer
+
+    bridge = PSI3DGlassBridge("INTP-T", "software engineer")
+    bridge.p_layer.config.social_graph.register_relation(RelationalProfile(
+        target_user_id="wife_01",
+        relation_type="spouse",
+        intimacy_baseline=0.95,
+        emotional_vulnerability=1.8,
+        power_dynamic="equal",
+        social_contract_lore="挚爱伴侣"
+    ))
+
+    # 1. 讨厌同事恶意甩锅，触发强烈负向人际靶向情绪 (Reproach / Disliking / Anger) 与全局 Distress
+    colleague_insult = {
+        "desirability": -0.75,
+        "blameworthiness": -0.85,
+        "appealingness": -0.70,
+        "prospect_status": "none"
+    }
+    bridge.receive_user_stimulus(colleague_insult, speaker_id="colleague_zhang")
+
+    colleague_state = bridge.get_current_avatar_state(speaker_id="colleague_zhang")
+    assert colleague_state["active_emotions"].get("Reproach", 0.0) > 0.5
+    assert colleague_state["active_emotions"].get("Disliking", 0.0) > 0.4
+    assert colleague_state["active_emotions"].get("Anger", 0.0) > 0.5
+    assert colleague_state["active_emotions"].get("Distress", 0.0) > 0.4
+
+    # 2. 下一秒切换为伴侣说话：全局 Distress 保留，但针对同事的 Reproach/Disliking/Anger 被严格物理隔离！
+    wife_state = bridge.get_current_avatar_state(speaker_id="wife_01")
+    assert "Reproach" not in wife_state["active_emotions"]
+    assert "Disliking" not in wife_state["active_emotions"]
+    assert "Anger" not in wife_state["active_emotions"]
+    assert wife_state["active_emotions"].get("Distress", 0.0) > 0.4
+    assert "colleague_zhang" in wife_state["external_lingering_emotions"]
+
+    # 3. 验证 Prompt 渲染：对伴侣绝不注入 STRONG REPROACH/DISLIKING，而是注入归因隔离与可倾诉提示
+    renderer = LLMPromptRenderer("cat_intpt", "software engineer", DummyLoreFactory())
+    wife_prompt = renderer.render_system_prompt(wife_state)
+    assert "STRONG REPROACH" not in wife_prompt
+    assert "STRONG DISLIKING" not in wife_prompt
+    assert "EXTERNAL EMOTIONAL RESIDUE - DO NOT MISDIRECT" in wife_prompt
+    assert "colleague_zhang" in wife_prompt
+
+    # 4. 验证持久化快照还原后，切回同事依然保留对其的怒火，衰减归零后自动回收空桶
+    restored = PSI3DGlassBridge.load_bridge(bridge.to_dict())
+    assert restored.get_current_avatar_state("colleague_zhang")["active_emotions"].get("Reproach", 0.0) > 0.5
+    assert "Reproach" not in restored.get_current_avatar_state("wife_01")["active_emotions"]
+
+    for _ in range(5):
+        restored.update_system_clock()
+    assert "colleague_zhang" not in restored.e_layer.directed_emotions
