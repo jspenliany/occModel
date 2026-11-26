@@ -458,10 +458,10 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
 
-    def render_reflect_prompt(self, avatar_state: dict) -> str:
+    def render_reflect_prompt(self, avatar_state: dict, agenda_prompt_block: str = "unset") -> str:
         """
         external input affect occ model:
-        reflect message content into occ values (with relational calibration).
+        reflect message content into occ values (with relational + endogenous PSI agenda calibration).
         """
         logger.debug("reflect message_content into occ values...begin")
         mbti = avatar_state.get("mbti", "UNKNOWN")
@@ -487,6 +487,15 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
             "equal": "双方处于平等社会地位，完全按客观标准与亲密度进行评估。"
         }.get(power, "双方处于平等社会地位，完全按客观标准与亲密度进行评估。")
 
+        has_agenda = bool(agenda_prompt_block and agenda_prompt_block != "unset")
+        agenda_section = f"\n{agenda_prompt_block}\n" if has_agenda else ""
+        agenda_rule = (
+            "4. **内生动机与自我目标校准（影响 `desirability` 与 `future_desirability`）**：\n"
+            "   - 若用户输入顺应、推进了当前的 `Active Autonomous Goal`，或缓解了标有 `[CRITICAL]` 的高危内生匮乏（如极度疲劳时获准休息、孤独时得到真诚陪伴、好奇时获得深度解答、失控时理清秩序），`desirability` 应额外向正向倾斜（+0.2 ~ +0.5）。\n"
+            "   - 若在生理疲劳极高时仍被强塞繁琐消耗，或当前主导意图遭到粗暴打断与敷衍，即便话题本身符合平时职业习惯，`desirability` 也必须偏向负值。"
+            if has_agenda else ""
+        )
+
         reflect_prompt = f"""
         # ROLE
 你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，结合【当前对话者的社会关系契约】，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
@@ -495,21 +504,22 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 - 名字: {self.character_name} ({avatar_state.get("profession", "manager")})
 - 基础人格 (MBTI): {mbti}
 - 核心背景 (Background Core Lore): {core_lore} 
-# 提示：请根据上述 Core Lore（例如：崇尚效率、情感剥离、将任务视为复杂逻辑系统），作为你评估事件利弊和他人言行对错的唯一主观准则。
-
+# 提示：请结合上述静态 Core Lore（长期价值观）与下方的动态内生状态（当下生理水位与心事），共同作为评估事件利弊的主观准则。
+{agenda_section}
 # INTERLOCUTOR RELATIONAL CONTRACT (当前说话人社会关系契约 - 极其重要)
 - 关系身份: {rel_type.upper()}
 - 亲密度基准 (Intimacy): {intimacy} (范围 -1.0 到 1.0)
 - 权力结构 (Power Dynamic): {power}
 - 关系契约说明: {contract_lore}
 
-# RELATIONAL QUANTIFICATION RULES (社会关系对 OCC 指标的量化校准铁律)
-在给以下 8 个参数打分时，**必须**先经过上述关系契约的校准：
+# RELATIONAL & ENDOGENOUS QUANTIFICATION RULES (量化校准铁律)
+在给以下 8 个参数打分时，**必须**先经过上述契约与内生状态的校准：
 1. **基准锚定**：`other_relationship` 必须以当前亲密度 `{intimacy}` 为基准（仅允许在 ±0.15 内微调）。
 2. **越界与语言豁免权校准（影响 `blameworthiness` 与 `appealingness`）**：
    - 若亲密度高（`Intimacy >= 0.7`，如伴侣/挚友）：对方拥有极高的语言豁免权。调侃、喊亲昵称呼（如“宝”、“媳妇”）、开玩笑互损**绝不视为冒犯**（`blameworthiness` 应保持 `0.0` 或微正，`appealingness` 偏正）；但若是伴侣的冷漠、否定或指责，则情感痛感极深（`desirability` 需给出更深的负值）。
    - 若亲密度低（`Intimacy < 0.3`，如陌生人/普通同事）：对越界行为**零容错**。一旦出现突兀的亲昵称呼、冒犯性玩笑或过度打探隐私，必须判定为严重越界冒犯（`blameworthiness` 给出 `-0.5` 到 `-0.9`，`appealingness` 为负）。
 3. **权力结构校准**：{power_calibration}
+{agenda_rule}
 
 # OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
 请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：
