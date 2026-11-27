@@ -14,8 +14,8 @@ class MoodLayer:
         # 计算基线与当前情感维度（优先使用显式传递的入参，无入参时动态读取配置项）
         self.baseline_valence = base_valence if base_valence is not None else state_cfg.default_base_valence
         self.baseline_arousal = base_arousal if base_arousal is not None else state_cfg.default_base_arousal
-        self.valence = base_valence
-        self.arousal = base_arousal
+        self.valence = self.baseline_valence
+        self.arousal = self.baseline_arousal
         # 动态加载自然衰减系数
         self.decay_rate = state_cfg.decay_rate
 
