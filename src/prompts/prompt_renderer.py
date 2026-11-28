@@ -466,7 +466,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
         logger.debug("Rendering benchmark prompt...end")
         return system_prompt.strip()
 
-    def render_reflect_prompt(self, avatar_state: dict, agenda_prompt_block: str = "unset") -> str:
+    def render_reflect_prompt(self, avatar_state: dict, agenda_prompt_block: str = "unset", motive_plan_delta_block: str = "") -> str:
         """
         external input affect occ model:
         reflect message content into occ values (with relational + endogenous PSI agenda calibration).
@@ -503,7 +503,13 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
             "   - 若在生理疲劳极高时仍被强塞繁琐消耗，或当前主导意图遭到粗暴打断与敷衍，即便话题本身符合平时职业习惯，`desirability` 也必须偏向负值。"
             if has_agenda else ""
         )
-
+        delta_section = (
+            f"\n{motive_plan_delta_block}\n" if motive_plan_delta_block else ""
+        )
+        delta_rule = (
+            "5. **目标树与动力槽增量关联**: 结合 MOTIVE & PLAN INCREMENTAL UPDATE 中的本轮动机冲击增量、目标进度/受阻或涌现子目标，同步修正事件对角色情感的影响幅度与极性\n"
+            if motive_plan_delta_block else ""
+        )
         reflect_prompt = f"""
         # ROLE
 你是一个精通认知心理学与标准 OCC 情感模型的“客观认知评估器”。你的任务是站在【目标角色】的认知视角，结合【当前对话者的社会关系契约】，分析【用户的最新输入】对该角色心理状态造成的冲击，并逆向输出符合后端接收标准的 8 种原始刺激参数。
@@ -513,7 +519,7 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 - 基础人格 (MBTI): {mbti}
 - 核心背景 (Background Core Lore): {core_lore} 
 # 提示：请结合上述静态 Core Lore（长期价值观）与下方的动态内生状态（当下生理水位与心事），共同作为评估事件利弊的主观准则。
-{agenda_section}
+{agenda_section}\n{delta_section}
 # INTERLOCUTOR RELATIONAL CONTRACT (当前说话人社会关系契约 - 极其重要)
 - 关系身份: {rel_type.upper()}
 - 亲密度基准 (Intimacy): {intimacy} (范围 -1.0 到 1.0)
@@ -526,8 +532,8 @@ SHORT-TERM ACTIVE EMOTIONS (OCC Spikes):
 2. **越界与语言豁免权校准（影响 `blameworthiness` 与 `appealingness`）**：
    - 若亲密度高（`Intimacy >= 0.7`，如伴侣/挚友）：对方拥有极高的语言豁免权。调侃、喊亲昵称呼（如“宝”、“媳妇”）、开玩笑互损**绝不视为冒犯**（`blameworthiness` 应保持 `0.0` 或微正，`appealingness` 偏正）；但若是伴侣的冷漠、否定或指责，则情感痛感极深（`desirability` 需给出更深的负值）。
    - 若亲密度低（`Intimacy < 0.3`，如陌生人/普通同事）：对越界行为**零容错**。一旦出现突兀的亲昵称呼、冒犯性玩笑或过度打探隐私，必须判定为严重越界冒犯（`blameworthiness` 给出 `-0.5` 到 `-0.9`，`appealingness` 为负）。
-3. **权力结构校准**：{power_calibration}
-{agenda_rule}
+3. **权力结构校准**：{power_calibration}\n
+{agenda_rule}\n{delta_rule}
 
 # OCC EVALUATION OBJECTS & RULES (严格执行正负极性规范)
 请评估用户当前输入对角色所产生的刺激强度。**请注意严格遵守数值区间与正负号符号规则**：

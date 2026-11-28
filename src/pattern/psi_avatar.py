@@ -45,12 +45,20 @@ class PsiAvatar:
         occ_appraisal = self.appraiser.appraise(
             user_input=user_input,
             user_plans=[{"plan_id": "p1", "title": "完成版本发布", "importance": 0.8}],
+            include_autonomous_meta=True
         )
         logger.debug(f"8 维 OCC 字典...occ_appraisal : {occ_appraisal}")
+        auto_state = occ_appraisal.get("_autonomous_state", {})
+        motive_plan_delta_block = (
+            "### MOTIVE & PLAN INCREMENTAL UPDATE (目标树与动力槽增量同步)\n"
+            f"- 本轮动机冲击增量: {auto_state.get('raw_drive_impacts', {})}\n"
+            f"- 目标树状态快照: {auto_state.get('plan_tree', {})}\n"
+            f"- 涌现子目标: {auto_state.get('emergent_subgoal')}"
+        )
         # 导出可拼接到下游角色 System Prompt 的内生动机与当前自我议程片段
         agenda_prompt_block = self.appraiser.render_autonomous_agenda_prompt()
         logger.debug(f"内生动机...agenda_prompt_block : {agenda_prompt_block}")
-        reflect_prompt = self.renderer.render_reflect_prompt(current_state,agenda_prompt_block)
+        reflect_prompt = self.renderer.render_reflect_prompt(current_state,agenda_prompt_block,motive_plan_delta_block=motive_plan_delta_block)
         logger.debug(f"get_reflect_payload  reflect_prompt: {reflect_prompt}")
         return [
             ChatCompletionSystemMessageParam(role="system", content=reflect_prompt),
